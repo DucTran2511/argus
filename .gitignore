@@ -1,1 +1,16 @@
-*.md
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build
+target/
+build/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# *.md

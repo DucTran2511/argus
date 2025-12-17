@@ -1,0 +1,10 @@
+services:
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: argus-redis-ui
+    environment:
+      REDIS_HOSTS: local:host.docker.internal:6379:1
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
