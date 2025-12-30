@@ -41,6 +41,20 @@ public class TransactionEntity {
     @Column(length = 20)
     private String type;
 
+    // Core transaction fields from blockchain
+    @Column(name = "from_address", length = 42)
+    private String from;
+
+    @Column(name = "to_address", length = 42)
+    private String to;
+
+    @Column(name = "value_eth", precision = 30, scale = 18)
+    private BigDecimal value;
+
+    @Column(columnDefinition = "TEXT")
+    private String input;
+
+    // DEX-specific fields
     @Column(length = 66)
     private String tokenIn;
 
@@ -56,6 +70,7 @@ public class TransactionEntity {
     @Column(precision = 20, scale = 2)
     private BigDecimal usdValue;
 
+    // Block metadata
     private Long blockNumber;
 
     private Long gasUsed;
