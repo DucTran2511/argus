@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -26,4 +27,7 @@ public interface WalletRepository extends JpaRepository<WalletEntity, UUID> {
 
     @Query("SELECT w FROM WalletEntity w WHERE w.winRate > :minWinRate AND w.totalPnl > 0 ORDER BY w.totalPnl DESC")
     List<WalletEntity> findTopPerformers(Double minWinRate);
+
+    @Query("SELECT w.address FROM WalletEntity w")
+    Set<String> findAllAddresses();
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -85,7 +86,17 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
     }
 
     @Override
+    public boolean existsById(UUID id) {
+        return repository.existsById(id);
+    }
+
+    @Override
     public void delete(UUID id) {
+        repository.deleteById(id);
+    }
+
+    @Override
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 
@@ -93,6 +104,11 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
     public void deleteByAddress(String address) {
         repository.findByAddress(address)
                 .ifPresent(repository::delete);
+    }
+
+    @Override
+    public Set<String> getAllAddresses() {
+        return repository.findAllAddresses();
     }
 
     private void validateWallet(Wallet wallet) {

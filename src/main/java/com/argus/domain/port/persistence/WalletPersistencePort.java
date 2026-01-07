@@ -4,6 +4,7 @@ import com.argus.domain.model.Wallet;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface WalletPersistencePort {
@@ -26,7 +27,13 @@ public interface WalletPersistencePort {
 
     boolean existsByAddress(String address);
 
+    boolean existsById(UUID id);
+
     void delete(UUID id);
 
+    void deleteById(UUID id);
+
     void deleteByAddress(String address);
+
+    Set<String> getAllAddresses();
 }
