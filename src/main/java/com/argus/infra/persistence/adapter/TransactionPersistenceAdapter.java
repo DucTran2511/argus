@@ -1,25 +1,36 @@
 package com.argus.infra.persistence.adapter;
 
 import com.argus.domain.model.Transaction;
+import com.argus.domain.model.AssetTransfer;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.infra.persistence.entity.TransactionEntity;
+import com.argus.infra.persistence.entity.AssetTransferEntity;
 import com.argus.infra.persistence.repository.TransactionRepository;
+import com.argus.infra.persistence.repository.AssetTransferRepository;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Component;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TransactionPersistenceAdapter implements TransactionPersistencePort {
     private final TransactionRepository transactionRepository;
+    private final AssetTransferRepository assetTransferRepository;
 
     @Override
     @Transactional
     public Transaction save(Transaction transaction) {
         validateTransaction(transaction);
+
         TransactionEntity entity = toEntity(transaction);
         TransactionEntity saved = transactionRepository.save(entity);
         return toDomain(saved);
@@ -29,6 +40,90 @@ public class TransactionPersistenceAdapter implements TransactionPersistencePort
         if (transaction == null) {
             throw new IllegalArgumentException("Transaction cannot be null");
         }
+    }
+
+    @Override
+    @Transactional
+    public List<AssetTransfer> saveAssetTransfers(List<AssetTransfer> transfers) {
+        List<AssetTransferEntity> toSave = transfers.stream()
+                .map(this::toAssetTransferEntity)
+                .filter(e -> !assetTransferRepository.existsByTxHashAndWalletAddressAndCategory(
+                        e.getTxHash(), e.getWalletAddress(), e.getCategory()))
+                .toList();
+
+        if (toSave.isEmpty()) {
+            log.info("No new transfers to save");
+            return List.of();
+        }
+
+        List<AssetTransferEntity> saved = assetTransferRepository.saveAll(toSave);
+        return saved.stream().map(this::toAssetTransferDomain).toList();
+    }
+
+    @Override
+    public List<AssetTransfer> findByWalletAddress(String address, int limit, String order) {
+        Sort sort = order.equalsIgnoreCase("asc")
+                ? Sort.by("txTimestamp").ascending()
+                : Sort.by("txTimestamp").descending();
+
+        List<AssetTransferEntity> entities = assetTransferRepository
+                .findByWalletAddressOrderByTxTimestampDesc(
+                        address.toLowerCase(),
+                        PageRequest.of(0, limit, sort));
+
+        return entities.stream()
+                .map(this::toAssetTransferDomain)
+                .toList();
+    }
+
+    @Override
+    public List<AssetTransfer> findByWalletAddressAndDateRange(
+            String address, LocalDateTime from, LocalDateTime to) {
+        return assetTransferRepository
+                .findByWalletAddressAndTxTimestampBetween(address.toLowerCase(), from, to)
+                .stream()
+                .map(this::toAssetTransferDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByWalletAddress(String address) {
+        return assetTransferRepository.countByWalletAddress(address.toLowerCase());
+    }
+
+    private AssetTransferEntity toAssetTransferEntity(AssetTransfer domain) {
+        return AssetTransferEntity.builder()
+                .walletAddress(domain.getWalletAddress())
+                .txHash(domain.getTxHash())
+                .blockNumber(domain.getBlockNumber())
+                .fromAddress(domain.getFrom())
+                .toAddress(domain.getTo())
+                .category(domain.getCategory().name())
+                .value(domain.getValue())
+                .assetSymbol(domain.getAssetSymbol())
+                .tokenAddress(domain.getTokenAddress())
+                .txTimestamp(domain.getTxTimestamp())
+                .createdAt(domain.getCreatedAt())
+                .usdValue(domain.getUsdValue())
+                .build();
+    }
+
+    private AssetTransfer toAssetTransferDomain(AssetTransferEntity entity) {
+        return AssetTransfer.builder()
+                .id(entity.getId())
+                .walletAddress(entity.getWalletAddress())
+                .txHash(entity.getTxHash())
+                .blockNumber(entity.getBlockNumber())
+                .from(entity.getFromAddress())
+                .to(entity.getToAddress())
+                .category(AssetTransfer.TransferCategory.valueOf(entity.getCategory()))
+                .value(entity.getValue())
+                .assetSymbol(entity.getAssetSymbol())
+                .tokenAddress(entity.getTokenAddress())
+                .txTimestamp(entity.getTxTimestamp())
+                .createdAt(entity.getCreatedAt())
+                .usdValue(entity.getUsdValue())
+                .build();
     }
 
     private Transaction toDomain(TransactionEntity entity) {

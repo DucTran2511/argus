@@ -5,6 +5,7 @@ import com.argus.domain.port.blockchain.BlockChainPort;
 import com.argus.domain.port.blockchain.DexDecoderPort;
 import com.argus.domain.port.blockchain.PricePort;
 import com.argus.domain.port.cache.CachePort;
+import com.argus.domain.port.cache.BlockTrackingPort;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.service.PriceService;
@@ -18,16 +19,19 @@ import org.springframework.context.annotation.Configuration;
 public class DomainServiceConfig {
 
     @Bean
-    public WalletService walletService(WalletPersistencePort walletPersistencePort) {
-        return new WalletService(walletPersistencePort);
+    public WalletService walletService(WalletPersistencePort walletPersistencePort,
+            TransactionService transactionService,
+            BlockTrackingPort blockTrackingPort) {
+        return new WalletService(walletPersistencePort, transactionService, blockTrackingPort);
     }
 
     @Bean
     public TransactionService transactionService(
             BlockChainPort blockChainPort,
             TransactionPersistencePort transactionPersistencePort,
-            DexDecoderPort dexDecoder) {
-        return new TransactionService(blockChainPort, transactionPersistencePort, dexDecoder);
+            DexDecoderPort dexDecoder,
+            PriceService priceService) {
+        return new TransactionService(blockChainPort, transactionPersistencePort, dexDecoder, priceService);
     }
 
     @Bean
