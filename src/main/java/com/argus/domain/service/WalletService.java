@@ -2,6 +2,7 @@ package com.argus.domain.service;
 
 import com.argus.core.exception.WalletNotFoundException;
 import com.argus.domain.model.Wallet;
+import com.argus.domain.port.cache.BlockTrackingPort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ import java.util.UUID;
 public class WalletService {
 
     private final WalletPersistencePort walletPersistencePort;
+    private final TransactionService transactionService;
+    private final BlockTrackingPort blockTrackingPort;
 
     public Wallet createWallet(Wallet wallet) {
         log.info("Creating wallet with address: {}", wallet.getAddress());
@@ -32,7 +35,19 @@ public class WalletService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return walletPersistencePort.save(walletToCreate);
+        Wallet saved = walletPersistencePort.save(walletToCreate);
+
+        Thread.startVirtualThread(() -> {
+            try {
+                transactionService.syncWalletHistory(saved.getAddress(), 100);
+                log.info("Synced history for wallet: {}", saved.getAddress());
+            } catch (Exception e) {
+                log.warn("Sync failed for {}: {}", saved.getAddress(), e.getMessage());
+            }
+        });
+
+        blockTrackingPort.invalidateWalletCache();
+        return saved;
     }
 
     public Wallet getWalletById(UUID id) {
@@ -88,6 +103,8 @@ public class WalletService {
         }
 
         walletPersistencePort.deleteById(id);
+        blockTrackingPort.invalidateWalletCache();
+        log.info("Deleted wallet and invalidated cache");
     }
 
     public boolean walletExists(String address) {
