@@ -1,6 +1,6 @@
 # Argus - Data Flow Documentation
 
-> **Last Updated**: 2026-01-08 | **Status**: Living Document
+> **Last Updated**: 2026-01-09 | **Status**: Living Document
 
 This document describes the current data flows in the Argus system. Keep this updated as new features are added.
 
@@ -169,6 +169,24 @@ User Request → WalletController.syncWalletHistory()
 - Parallel fetch for incoming + outgoing
 - Pagination with `pageKey`
 
+**Day 14 Enhancement - USD Value Enrichment:**
+```
+For each AssetTransfer:
+    │
+    ├── if tokenAddress == null (Native ETH)
+    │       → priceService.getEthPrice()
+    │       → usdValue = value × ethPrice
+    │
+    └── else (ERC20 token)
+            → priceService.calculateUsdValue(tokenAddress, value)
+            → Checks Redis cache (60s TTL)
+            → Falls back to DexScreener API
+            → usdValue = value × tokenPrice
+```
+
+**Zero Dollar Bug Fix:**
+- Native ETH transfers now correctly use `getEthPrice()` instead of returning $0
+
 ---
 
 ### Flow 4: Block Monitoring Job (Scheduled)
@@ -224,7 +242,7 @@ processed       addresses       [cursor+1..current]
 |-------|---------|------------|
 | `wallets` | Tracked wallet addresses | `address`, `type`, `label`, `total_pnl`, `win_rate` |
 | `transactions` | Raw blockchain transactions | `tx_hash`, `from`, `to`, `value`, `input` |
-| `asset_transfers` | Normalized transfers (Alchemy) | `wallet_address`, `tx_hash`, `category`, `value`, `asset_symbol` |
+| `asset_transfers` | Normalized transfers (Alchemy) | `wallet_address`, `tx_hash`, `category`, `value`, `usd_value`, `asset_symbol`, `token_address` |
 | `tokens` | Token metadata | `address`, `symbol`, `name` |
 | `signals` | Trading signals | `type`, `wallet_id`, `token_address`, `confidence_score` |
 | `users` | User accounts | `email`, `telegram_id` |
@@ -280,7 +298,14 @@ void invalidateWalletCache()
 ### PricePort (Day 11)
 ```java
 Optional<TokenPrice> getTokenPrice(String tokenAddress, String chain)
-BigDecimal getEthPrice()
+BigDecimal getEthPrice()  // Used for Native ETH USD calculation
+```
+
+### CachePort<K, V> (Day 11)
+```java
+Optional<V> get(K key)
+void put(K key, V value, Duration ttl)
+void evict(K key)
 ```
 
 ---
