@@ -55,7 +55,7 @@ public class SignalEntity {
     @Column(name = "ai_narrative")
     private String aiNarrative;
 
-    @Column(name = "metadata")
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
     @Column(name = "created_at")

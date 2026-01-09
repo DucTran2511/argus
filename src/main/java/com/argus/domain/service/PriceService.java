@@ -23,6 +23,8 @@ public class PriceService {
     private final CachePort<String, TokenPrice> cache;
 
     public TokenPrice getPrice(String tokenAddress) {
+        validateTokenAddress(tokenAddress);
+
         String cacheKey = CACHE_PREFIX + tokenAddress.toLowerCase();
 
         Optional<TokenPrice> cached = cache.get(cacheKey);
@@ -43,6 +45,13 @@ public class PriceService {
         log.debug("Cached price for {}: status={}", tokenAddress, price.getStatus());
 
         return price;
+    }
+
+    private void validateTokenAddress(String tokenAddress) {
+        if (tokenAddress == null || !tokenAddress.startsWith("0x") || tokenAddress.length() != 42) {
+            throw new IllegalArgumentException(
+                    "Invalid token address format. Must start with 0x and be 42 characters long.");
+        }
     }
 
     public BigDecimal calculateUsdValue(String tokenAddress, BigDecimal amount) {

@@ -1,5 +1,5 @@
 CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     wallet_id UUID REFERENCES wallets(id) ON DELETE CASCADE,
     tx_hash VARCHAR(66) NOT NULL,
     chain VARCHAR(20) NOT NULL DEFAULT 'ethereum',

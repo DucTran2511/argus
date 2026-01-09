@@ -34,7 +34,7 @@ public class TokenPersistenceAdapter implements TokenPersistencePort {
 
     private Token toDomain(TokenEntity tokenEntity) {
         return Token.builder()
-                .id(tokenEntity.getId())
+                .address(tokenEntity.getAddress())
                 .chain(tokenEntity.getChain())
                 .symbol(tokenEntity.getSymbol())
                 .name(tokenEntity.getName())
@@ -49,7 +49,7 @@ public class TokenPersistenceAdapter implements TokenPersistencePort {
 
     private TokenEntity toEntity(Token token) {
         return TokenEntity.builder()
-                .id(token.getId())
+                .address(token.getAddress())
                 .chain(token.getChain())
                 .symbol(token.getSymbol())
                 .name(token.getName())
@@ -57,8 +57,8 @@ public class TokenPersistenceAdapter implements TokenPersistencePort {
                 .marketCap(token.getMarketCap())
                 .liquidity(token.getLiquidity())
                 .riskScore(token.getRiskScore())
-                .createdAt(token.getId() != null ? token.getCreatedAt() : null)
-                .updatedAt(token.getId() != null ? token.getUpdatedAt() : null)
+                .createdAt(token.getCreatedAt())
+                .updatedAt(token.getUpdatedAt())
                 .build();
     }
 }

@@ -1,5 +1,5 @@
 CREATE TABLE signals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGSERIAL PRIMARY KEY,
     type VARCHAR(50) NOT NULL,
     wallet_id UUID REFERENCES wallets(id) ON DELETE SET NULL,
     token_address VARCHAR(66),

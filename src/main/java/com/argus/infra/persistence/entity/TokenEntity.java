@@ -14,7 +14,6 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -28,8 +27,8 @@ import lombok.Setter;
 @Builder
 public class TokenEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @Column(name = "address", length = 66)
+    private String address;
 
     @Column(name = "chain", nullable = false, length = 20)
     private String chain;

@@ -17,14 +17,20 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+    private String errorCode;
     private LocalDateTime timestamp;
 
     public static ErrorResponse of(int status, String error, String message, String path) {
+        return of(status, error, message, path, null);
+    }
+
+    public static ErrorResponse of(int status, String error, String message, String path, String errorCode) {
         return ErrorResponse.builder()
                 .status(status)
                 .error(error)
                 .message(message)
                 .path(path)
+                .errorCode(errorCode)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

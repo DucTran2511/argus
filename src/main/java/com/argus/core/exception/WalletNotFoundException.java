@@ -19,6 +19,12 @@ public class WalletNotFoundException extends DomainException {
         log.error("Wallet not found in database. WalletId: {}", walletId);
     }
 
+    public WalletNotFoundException(String message) {
+        super(ERROR_CODE, message);
+        this.walletId = null;
+        log.error("Wallet not found: {}", message);
+    }
+
     public UUID getWalletId() {
         return walletId;
     }

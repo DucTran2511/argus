@@ -13,4 +13,7 @@ build/
 # OS
 .DS_Store
 
-*.md
+# Environment Variables (NEVER COMMIT!)
+.env
+.env.local
+

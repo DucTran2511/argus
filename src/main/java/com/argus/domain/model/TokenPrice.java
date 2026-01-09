@@ -19,7 +19,7 @@ public class TokenPrice {
     private LocalDateTime fetchAt;
     private PriceStatus status;
 
-    private enum PriceStatus {
+    public enum PriceStatus {
         FOUND, // Valid price
         NOT_FOUND, // Token not on DexScreener
         LOW_LIQUIDITY, // Found but liquidity < $1000

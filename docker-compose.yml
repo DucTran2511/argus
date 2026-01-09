@@ -1,10 +1,59 @@
+# This file sets up PostgreSQL, Redis, and Redis Commander for local development
+# Usage: docker-compose up -d
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: argus-postgres
+    environment:
+      POSTGRES_DB: argus
+      POSTGRES_USER: argus_user
+      POSTGRES_PASSWORD: argus_local_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus_user -d argus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - argus-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: argus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - argus-network
+
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: argus-redis-ui
     environment:
-      REDIS_HOSTS: local:host.docker.internal:6379:1
+      REDIS_HOSTS: local:redis:6379:1
     ports:
       - "8081:8081"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    networks:
+      - argus-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  argus-network:
+    driver: bridge
