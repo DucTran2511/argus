@@ -5,6 +5,7 @@ import com.argus.api.dto.WalletResponse;
 import com.argus.api.dto.response.AssetTransferResponse;
 import com.argus.api.dto.response.WalletTimelineResponse;
 import com.argus.api.dto.response.SyncResponse;
+import com.argus.api.spec.WalletApi;
 import com.argus.domain.model.AssetTransfer;
 import com.argus.domain.model.Wallet;
 import com.argus.domain.service.WalletService;
@@ -35,131 +36,121 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/wallets")
 @RequiredArgsConstructor
-public class WalletController {
+public class WalletController implements WalletApi {
 
-    private final WalletService walletService;
-    private final TransactionService transactionService;
+        private final WalletService walletService;
+        private final TransactionService transactionService;
 
-    @PostMapping
-    public ResponseEntity<WalletResponse> createWallet(@Valid @RequestBody WalletRequest request) {
-        log.info("POST /api/v1/wallets - Creating wallet with address: {}", request.getAddress());
-
-        Wallet wallet = walletService.createWallet(request.toDomain());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(WalletResponse.fromDomain(wallet));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<WalletResponse> getWalletById(@PathVariable UUID id) {
-        log.info("GET /api/v1/wallets/{} - Fetching wallet by id", id);
-
-        Wallet wallet = walletService.getWalletById(id);
-
-        return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
-    }
-
-    @GetMapping("/address/{address}")
-    public ResponseEntity<WalletResponse> getWalletByAddress(@PathVariable String address) {
-        log.info("GET /api/v1/wallets/address/{} - Fetching wallet by address", address);
-
-        Wallet wallet = walletService.getWalletByAddress(address);
-
-        return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
-    }
-
-    @GetMapping
-    public ResponseEntity<List<WalletResponse>> getAllWallets(
-            @RequestParam(required = false) String type) {
-
-        log.info("GET /api/v1/wallets - Fetching all wallets (type filter: {})", type);
-
-        List<Wallet> wallets;
-
-        if (type != null && !type.isEmpty()) {
-            Wallet.WalletType walletType = Wallet.WalletType.valueOf(type.toUpperCase());
-            wallets = walletService.getWalletsByType(walletType);
-        } else {
-            wallets = walletService.getAllWallets();
+        @Override
+        @PostMapping
+        public ResponseEntity<WalletResponse> createWallet(
+                        @Valid @RequestBody WalletRequest request) {
+                log.info("POST /api/v1/wallets - Creating wallet with address: {}", request.getAddress());
+                Wallet wallet = walletService.createWallet(request.toDomain());
+                return ResponseEntity.status(HttpStatus.CREATED).body(WalletResponse.fromDomain(wallet));
         }
 
-        List<WalletResponse> response = wallets.stream()
-                .map(WalletResponse::fromDomain)
-                .collect(Collectors.toList());
+        @Override
+        @GetMapping("/{id}")
+        public ResponseEntity<WalletResponse> getWalletById(
+                        @PathVariable UUID id) {
+                log.info("GET /api/v1/wallets/{} - Fetching wallet by id", id);
+                Wallet wallet = walletService.getWalletById(id);
+                return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
+        }
 
-        return ResponseEntity.ok(response);
-    }
+        @Override
+        @GetMapping("/address/{address}")
+        public ResponseEntity<WalletResponse> getWalletByAddress(
+                        @PathVariable String address) {
+                log.info("GET /api/v1/wallets/address/{} - Fetching wallet by address", address);
+                Wallet wallet = walletService.getWalletByAddress(address);
+                return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
+        }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<WalletResponse> updateWallet(
-            @PathVariable UUID id,
-            @Valid @RequestBody WalletRequest request) {
+        @Override
+        @GetMapping
+        public ResponseEntity<List<WalletResponse>> getAllWallets(
+                        @RequestParam(required = false) Wallet.WalletType type) {
+                log.info("GET /api/v1/wallets - Fetching all wallets (type filter: {})", type);
 
-        log.info("PUT /api/v1/wallets/{} - Updating wallet", id);
+                List<Wallet> wallets = (type == null)
+                                ? walletService.getAllWallets()
+                                : walletService.getWalletsByType(type);
 
-        Wallet updatedWallet = request.toDomain();
-        Wallet wallet = walletService.updateWallet(id, updatedWallet);
+                List<WalletResponse> response = wallets.stream()
+                                .map(WalletResponse::fromDomain)
+                                .collect(Collectors.toList());
 
-        return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWallet(@PathVariable UUID id) {
-        log.info("DELETE /api/v1/wallets/{} - Deleting wallet", id);
+        @Override
+        @PutMapping("/{id}")
+        public ResponseEntity<WalletResponse> updateWallet(
+                        @PathVariable UUID id,
+                        @Valid @RequestBody WalletRequest request) {
+                log.info("PUT /api/v1/wallets/{} - Updating wallet", id);
+                Wallet updatedWallet = request.toDomain();
+                Wallet wallet = walletService.updateWallet(id, updatedWallet);
+                return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
+        }
 
-        walletService.deleteWallet(id);
+        @Override
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deleteWallet(
+                        @PathVariable UUID id) {
+                log.info("DELETE /api/v1/wallets/{} - Deleting wallet", id);
+                walletService.deleteWallet(id);
+                return ResponseEntity.noContent().build();
+        }
 
-        return ResponseEntity.noContent().build();
-    }
+        @Override
+        @GetMapping("/exists/{address}")
+        public ResponseEntity<Boolean> walletExists(
+                        @PathVariable String address) {
+                log.info("GET /api/v1/wallets/exists/{} - Checking if wallet exists", address);
+                boolean exists = walletService.walletExists(address);
+                return ResponseEntity.ok(exists);
+        }
 
-    @GetMapping("/exists/{address}")
-    public ResponseEntity<Boolean> walletExists(@PathVariable String address) {
-        log.info("GET /api/v1/wallets/exists/{} - Checking if wallet exists", address);
+        @Override
+        @GetMapping("/{address}/transactions")
+        public ResponseEntity<WalletTimelineResponse> getWalletTimeline(
+                        @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(500) int limit,
+                        @RequestParam(defaultValue = "desc") @Pattern(regexp = "^(asc|desc)$") String order) {
 
-        boolean exists = walletService.walletExists(address);
+                List<AssetTransfer> transfers = transactionService.getWalletHistory(address, limit, order);
+                long totalCount = transactionService.countTransactions(address);
 
-        return ResponseEntity.ok(exists);
-    }
+                WalletTimelineResponse response = WalletTimelineResponse.builder()
+                                .address(address)
+                                .totalTransactions(totalCount)
+                                .showing(transfers.size())
+                                .transactions(transfers.stream()
+                                                .map(AssetTransferResponse::fromDomain)
+                                                .toList())
+                                .build();
 
-    @GetMapping("/{address}/transactions")
-    public ResponseEntity<WalletTimelineResponse> getWalletTimeline(
-            @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
-            @RequestParam(defaultValue = "50") @Min(1) @Max(500) int limit,
-            @RequestParam(defaultValue = "desc") @Pattern(regexp = "^(asc|desc)$") String order) {
+                return ResponseEntity.ok(response);
+        }
 
-        List<AssetTransfer> transfers = transactionService
-                .getWalletHistory(address, limit, order);
+        @Override
+        @PostMapping("/{address}/sync-history")
+        public ResponseEntity<SyncResponse> syncWalletHistory(
+                        @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
+                        @RequestParam(defaultValue = "500") int maxCount) {
+                log.info("POST /api/v1/wallets/{}/sync-history - maxCount: {}", address, maxCount);
 
-        long totalCount = transactionService.countTransactions(address);
+                List<AssetTransfer> synced = transactionService.syncWalletHistory(address, maxCount);
 
-        WalletTimelineResponse response = WalletTimelineResponse.builder()
-                .address(address)
-                .totalTransactions(totalCount)
-                .showing(transfers.size())
-                .transactions(transfers.stream()
-                        .map(AssetTransferResponse::fromDomain)
-                        .toList())
-                .build();
+                SyncResponse response = SyncResponse.builder()
+                                .address(address)
+                                .syncedCount(synced.size())
+                                .message("Successfully synced wallet transaction history")
+                                .build();
 
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{address}/sync-history")
-    public ResponseEntity<SyncResponse> syncWalletHistory(
-            @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
-            @RequestParam(defaultValue = "500") int maxCount) {
-
-        log.info("POST /api/v1/wallets/{}/sync-history - maxCount: {}",
-                address, maxCount);
-
-        List<AssetTransfer> synced = transactionService
-                .syncWalletHistory(address, maxCount);
-
-        SyncResponse response = SyncResponse.builder()
-                .address(address)
-                .syncedCount(synced.size())
-                .message("Successfully synced wallet transaction history")
-                .build();
-
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 }

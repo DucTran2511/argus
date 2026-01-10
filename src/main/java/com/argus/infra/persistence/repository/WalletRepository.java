@@ -17,13 +17,13 @@ public interface WalletRepository extends JpaRepository<WalletEntity, UUID> {
 
     List<WalletEntity> findByChain(String chain);
 
-    List<WalletEntity> findByType(String type);
+    List<WalletEntity> findByType(WalletEntity.WalletType type);
 
-    List<WalletEntity> findByChainAndType(String chain, String type);
+    List<WalletEntity> findByChainAndType(String chain, WalletEntity.WalletType type);
 
     boolean existsByAddress(String address);
 
-    List<WalletEntity> findByTypeOrderByTotalPnlDesc(String type);
+    List<WalletEntity> findByTypeOrderByTotalPnlDesc(WalletEntity.WalletType type);
 
     @Query("SELECT w FROM WalletEntity w WHERE w.winRate > :minWinRate AND w.totalPnl > 0 ORDER BY w.totalPnl DESC")
     List<WalletEntity> findTopPerformers(Double minWinRate);

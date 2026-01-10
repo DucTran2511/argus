@@ -59,16 +59,16 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
 
     @Override
     public List<Wallet> findByType(Wallet.WalletType type) {
-        String typeString = type.name().toLowerCase();
-        return repository.findByType(typeString).stream()
+        WalletEntity.WalletType entityType = mapToEntityType(type);
+        return repository.findByType(entityType).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Wallet> findByChainAndType(String chain, Wallet.WalletType type) {
-        String typeString = type.name().toLowerCase();
-        return repository.findByChainAndType(chain, typeString).stream()
+        WalletEntity.WalletType entityType = mapToEntityType(type);
+        return repository.findByChainAndType(chain, entityType).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
