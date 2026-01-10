@@ -1,15 +1,16 @@
 package com.argus.infra.blockchain.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
-import java.math.BigDecimal;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AlchemyTransferDto {
     private String blockNum;
     private String hash;
     private String from;
     private String to;
-    private BigDecimal value;
+    private String value;
     private String asset;
     private String category;
     private String uniqueId;
@@ -18,12 +19,14 @@ public class AlchemyTransferDto {
     private Metadata metadata;
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class RawContract {
         private String address;
         private Integer decimals;
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Metadata {
         private String blockTimestamp;
     }

@@ -362,7 +362,7 @@ public class Web3jBlockchainAdapter implements BlockChainPort {
                 .blockNumber(parseHexToLong(dto.getBlockNum()))
                 .from(normalizeAddress(dto.getFrom()))
                 .to(normalizeAddress(dto.getTo()))
-                .value(dto.getValue())
+                .value(parseHexToBigDecimal(dto.getValue()))
                 .assetSymbol(dto.getAsset())
                 .tokenAddress(dto.getRawContract() != null ? dto.getRawContract().getAddress() : null)
                 .category(mapCategory(dto.getCategory()))
@@ -382,6 +382,19 @@ public class Web3jBlockchainAdapter implements BlockChainPort {
             case "erc1155" -> TransferCategory.ERC1155;
             default -> TransferCategory.EXTERNAL;
         };
+    }
+
+    private BigDecimal parseHexToBigDecimal(String hexValue) {
+        if (hexValue == null || hexValue.isEmpty() || hexValue.equals("0x0")) {
+            return BigDecimal.ZERO;
+        }
+        String clean = hexValue.startsWith("0x") ? hexValue.substring(2) : hexValue;
+        try {
+            return new BigDecimal(new BigInteger(clean, 16));
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse hex value to BigDecimal: {}", hexValue);
+            return BigDecimal.ZERO;
+        }
     }
 
     private AlchemyAssetTransfersResponse sendAlchemyRequest(AlchemyAssetTransfersRequest request) {
