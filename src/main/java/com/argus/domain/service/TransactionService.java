@@ -9,6 +9,8 @@ import com.argus.domain.model.TransactionWithSwap;
 import com.argus.domain.port.blockchain.BlockChainPort;
 import com.argus.domain.port.blockchain.DexDecoderPort;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
+import com.argus.infra.stream.StreamPublisher;
+import com.argus.infra.stream.dto.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +26,7 @@ public class TransactionService {
         private final TransactionPersistencePort transactionPersistencePort;
         private final DexDecoderPort dexDecoder;
         private final PriceService priceService;
+        private final StreamPublisher streamPublisher;
 
         /**
          * Fetch a transaction from the blockchain and decode swap information.
@@ -142,6 +145,11 @@ public class TransactionService {
                 // Save to database
                 List<AssetTransfer> saved = transactionPersistencePort.saveAssetTransfers(enrichedTransfers);
 
+                // Publish to stream for downstream consumers (signal detection)
+                for (AssetTransfer transfer : saved) {
+                        publishTransferEvent(transfer);
+                }
+
                 log.info("Synced {} transfers for wallet: {} (with USD values)", saved.size(), address);
                 return saved;
         }
@@ -156,5 +164,28 @@ public class TransactionService {
          */
         public long countTransactions(String address) {
                 return transactionPersistencePort.countByWalletAddress(address);
+        }
+
+        /**
+         * Publish transfer event to stream for downstream processing (signal
+         * detection).
+         */
+        private void publishTransferEvent(AssetTransfer transfer) {
+                try {
+                        TransactionEvent event = TransactionEvent.builder()
+                                        .txHash(transfer.getTxHash())
+                                        .from(transfer.getFrom())
+                                        .to(transfer.getTo())
+                                        .value(transfer.getValue())
+                                        .blockNumber(transfer.getBlockNumber())
+                                        .timestamp(transfer.getTxTimestamp()) // Blockchain timestamp
+                                        .category(transfer.getCategory() != null ? transfer.getCategory().name() : null)
+                                        .tokenAddress(transfer.getTokenAddress())
+                                        .usdValue(transfer.getUsdValue())
+                                        .build();
+                        streamPublisher.publishEvent(event);
+                } catch (Exception e) {
+                        log.warn("Failed to publish transfer event: {}. Continuing...", e.getMessage());
+                }
         }
 }

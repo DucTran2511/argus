@@ -332,21 +332,52 @@ PriceController → PriceService → CachePort (Redis, 60s TTL)
 
 ---
 
-## Future Flows (Planned)
+## Flow 6: Redis Streams Event Processing (Day 15) ✅ IMPLEMENTED
 
-### Flow 6: Redis Streams Event Processing (Day 15-16)
 ```
-BlockMonitorJob → Redis Stream "argus:transactions"
-                              │
-                              ▼
-                    TransactionProcessor (consumer)
-                              │
-                              ▼
-                    SignalDetector → Redis Stream "argus:signals"
-                                              │
-                                              ▼
-                                    AlertProcessor → Telegram
+BlockMonitorJob or WalletSync
+          │
+          ▼
+   RedisStreamPublisher.publishEvent()
+          │
+          ▼
+   Redis Stream "argus:transactions"
+          │
+          ├── Consumer Group: tx-processor-group
+          │         │
+          │         ▼
+          │   TransactionStreamConsumer.onMessage()
+          │         │
+          │         ├── Process transaction
+          │         ├── Save to DB / Enrich data
+          │         └── ACK message
+          │
+          └── Consumer Group: signal-detector-group (future)
+                    │
+                    ▼
+              SignalDetector → Redis Stream "argus:signals"
 ```
+
+**Stream Keys:**
+| Key | Purpose |
+|-----|---------|
+| `argus:transactions` | New transactions from sync/monitor |
+| `argus:signals` | Detected trading signals |
+
+**Consumer Groups:**
+| Group | Consumer | Purpose |
+|-------|----------|---------|
+| `tx-processor-group` | `tx-processor-{uuid}` | DB persistence, enrichment |
+| `signal-detector-group` | `signal-detector-{uuid}` | Signal detection (future) |
+
+**Key Files:**
+- `config/RedisStreamsConfig.java` - Stream container and subscription
+- `core/constant/StreamKeys.java` - Stream key constants
+- `infra/stream/StreamPublisher.java` - Publisher interface
+- `infra/stream/RedisStreamPublisher.java` - Redis implementation
+- `infra/stream/consumer/TransactionStreamConsumer.java` - Consumer implementation
+- `infra/stream/dto/TransactionEvent.java` - Event payload
+- `infra/stream/dto/SignalEvent.java` - Signal payload
 
 ---
 

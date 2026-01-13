@@ -11,6 +11,7 @@ import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.service.PriceService;
 import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.WalletService;
+import com.argus.infra.stream.StreamPublisher;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,8 +31,10 @@ public class DomainServiceConfig {
             BlockChainPort blockChainPort,
             TransactionPersistencePort transactionPersistencePort,
             DexDecoderPort dexDecoder,
-            PriceService priceService) {
-        return new TransactionService(blockChainPort, transactionPersistencePort, dexDecoder, priceService);
+            PriceService priceService,
+            StreamPublisher streamPublisher) {
+        return new TransactionService(blockChainPort, transactionPersistencePort, dexDecoder, priceService,
+                streamPublisher);
     }
 
     @Bean

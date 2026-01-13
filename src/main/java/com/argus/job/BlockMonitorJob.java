@@ -5,6 +5,8 @@ import com.argus.domain.port.blockchain.BlockChainPort;
 import com.argus.domain.port.cache.BlockTrackingPort;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
+import com.argus.infra.stream.StreamPublisher;
+import com.argus.infra.stream.dto.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,6 +26,7 @@ public class BlockMonitorJob {
     private final TransactionPersistencePort transactionPersistencePort;
     private final BlockTrackingPort blockTrackingPort;
     private final WalletPersistencePort walletPersistencePort;
+    private final StreamPublisher streamPublisher;
 
     public void execute() {
         long startTime = System.currentTimeMillis();
@@ -110,6 +113,10 @@ public class BlockMonitorJob {
             if (isRelevantTransaction(tx, lowerCaseAddresses)) {
                 try {
                     transactionPersistencePort.save(tx);
+
+                    // Publish for downstream consumers (signal detection)
+                    publishTransactionEvent(tx);
+
                     saved++;
                 } catch (Exception e) {
                     log.debug("Skipped duplicate or failed tx: {}", tx.getTxHash());
@@ -128,5 +135,25 @@ public class BlockMonitorJob {
         String to = tx.getTo() != null ? tx.getTo().toLowerCase() : "";
 
         return lowerWallets.contains(from) || lowerWallets.contains(to);
+    }
+
+    /**
+     * Publish transaction event to stream for downstream processing.
+     */
+    private void publishTransactionEvent(Transaction tx) {
+        try {
+            TransactionEvent event = TransactionEvent.builder()
+                    .txHash(tx.getTxHash())
+                    .from(tx.getFrom())
+                    .to(tx.getTo())
+                    .value(tx.getValue())
+                    .blockNumber(tx.getBlockNumber())
+                    .timestamp(tx.getTxTimestamp()) // Blockchain timestamp
+                    .category("EXTERNAL")
+                    .build();
+            streamPublisher.publishEvent(event);
+        } catch (Exception e) {
+            log.warn("Failed to publish transaction event: {}. Continuing...", e.getMessage());
+        }
     }
 }

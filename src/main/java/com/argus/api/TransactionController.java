@@ -1,6 +1,7 @@
 package com.argus.api;
 
 import com.argus.api.dto.TransactionResponse;
+import com.argus.api.spec.TransactionApi;
 import com.argus.domain.model.TransactionWithSwap;
 import com.argus.domain.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -17,33 +18,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
-public class TransactionController {
+public class TransactionController implements TransactionApi {
 
-        private final TransactionService transactionService;
+    private final TransactionService transactionService;
 
-        @GetMapping("/{txHash}")
-        public ResponseEntity<TransactionResponse> getTransaction(@PathVariable String txHash) {
-                validateTxHash(txHash);
+    @Override
+    @GetMapping("/{txHash}")
+    public ResponseEntity<TransactionResponse> getTransaction(@PathVariable String txHash) {
+        validateTxHash(txHash);
+        TransactionWithSwap result = transactionService.getTransaction(txHash);
+        return ResponseEntity.ok(TransactionResponse.from(result));
+    }
 
-                TransactionWithSwap result = transactionService.getTransaction(txHash);
+    @Override
+    @PostMapping("/{txHash}")
+    public ResponseEntity<TransactionResponse> saveTransaction(@PathVariable String txHash) {
+        validateTxHash(txHash);
+        TransactionWithSwap result = transactionService.saveTransaction(txHash);
+        return ResponseEntity.status(HttpStatus.CREATED).body(TransactionResponse.from(result));
+    }
 
-                return ResponseEntity.ok(TransactionResponse.from(result));
+    private void validateTxHash(String txHash) {
+        if (txHash == null || !txHash.startsWith("0x") || txHash.length() != 66) {
+            throw new IllegalArgumentException(
+                    "Invalid transaction hash format. Must start with 0x and be 66 characters long.");
         }
-
-        @PostMapping("/{txHash}")
-        public ResponseEntity<TransactionResponse> saveTransaction(@PathVariable String txHash) {
-                validateTxHash(txHash);
-
-                TransactionWithSwap result = transactionService.saveTransaction(txHash);
-
-                return ResponseEntity.status(HttpStatus.CREATED)
-                                .body(TransactionResponse.from(result));
-        }
-
-        private void validateTxHash(String txHash) {
-                if (txHash == null || !txHash.startsWith("0x") || txHash.length() != 66) {
-                        throw new IllegalArgumentException(
-                                        "Invalid transaction hash format. Must start with 0x and be 66 characters long.");
-                }
-        }
+    }
 }

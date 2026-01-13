@@ -153,12 +153,12 @@ argus/
 - [x] Unit tests for BlockMonitorJob (2 tests)
 
 #### Day 14 (3 hrs) - End of Phase 1 Review
-- [ ] Add USD value enrichment
+- [X] Add USD value enrichment
 - [ ] Integration testing of all components
-- [ ] Load test with 10 wallets
+- [X] Load test with 10 wallets
 - [ ] Fix bugs and edge cases
-- [ ] Document API endpoints
-- [ ] Prepare for Phase 2
+- [X] Document API endpoints
+- [X] Prepare for Phase 2
 
 ---
 
@@ -167,19 +167,19 @@ argus/
 ### Week 3: Event Processing
 
 #### Day 15 (3 hrs) - Redis Streams Setup
-- [ ] Configure Spring Data Redis Streams
-- [ ] Create streams: `argus:transactions`, `argus:signals`
-- [ ] Implement `StreamPublisher` for publishing events
-- [ ] Implement `StreamConsumer` with consumer groups
-- [ ] Test producer/consumer flow
-- [ ] Document Redis Streams setup
+- [X] Configure Spring Data Redis Streams
+- [X] Create streams: `argus:transactions`, `argus:signals`
+- [X] Implement `StreamPublisher` for publishing events
+- [X] Implement `StreamConsumer` with consumer groups
+- [] Test producer/consumer flow
+- [] Document Redis Streams setup
 
 #### Day 16 (3 hrs) - Event-Driven Architecture
-- [ ] Publish transactions to Redis Streams on detection
-- [ ] Create `TransactionProcessor` consumer
-- [ ] Implement transaction enrichment (add prices)
-- [ ] Store enriched transactions
-- [ ] Add error handling and retry logic
+- [X] Publish transactions to Redis Streams on detection
+- [X] Create `TransactionProcessor` consumer
+- [X] Implement transaction enrichment (add prices)
+- [X] Store enriched transactions
+- [X] Add error handling and retry logic
 
 #### Day 17 (3 hrs) - Whale Detection Logic
 - [ ] Define whale threshold ($50K+)
