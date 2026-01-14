@@ -4,13 +4,16 @@ import com.argus.domain.model.TokenPrice;
 import com.argus.domain.port.blockchain.BlockChainPort;
 import com.argus.domain.port.blockchain.DexDecoderPort;
 import com.argus.domain.port.blockchain.PricePort;
+import com.argus.domain.port.persistence.SignalPersistencePort;
 import com.argus.domain.port.cache.CachePort;
 import com.argus.domain.port.cache.BlockTrackingPort;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.service.PriceService;
+import com.argus.domain.service.WhaleDetectorService;
 import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.WalletService;
+
 import com.argus.infra.stream.StreamPublisher;
 
 import org.springframework.context.annotation.Bean;
@@ -42,5 +45,11 @@ public class DomainServiceConfig {
             PricePort pricePort,
             CachePort<String, TokenPrice> priceCache) {
         return new PriceService(pricePort, priceCache);
+    }
+
+    @Bean
+    public WhaleDetectorService whaleDetectorService(
+            SignalPersistencePort signalPersistencePort) {
+        return new WhaleDetectorService(signalPersistencePort);
     }
 }

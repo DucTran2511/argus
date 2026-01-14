@@ -22,6 +22,7 @@ public class Signal {
     private String chain;
     private BigDecimal usdValue;
     private BigDecimal confidenceScore;
+    private String txHash;
     private String aiNarrative;
     private String metadata;
     private LocalDateTime createdAt;

@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionEvent {
+    private String walletAddress;
     private String txHash;
     private String from;
     private String to;
@@ -20,6 +21,7 @@ public class TransactionEvent {
     private Long blockNumber;
     private LocalDateTime timestamp;
     private String category;
-    private String tokenAddress; // For token identification
-    private BigDecimal usdValue; // Already enriched USD value
+    private String tokenAddress;
+    private String tokenSymbol;
+    private BigDecimal usdValue;
 }
