@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 
 import com.argus.domain.model.Signal;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,6 +27,29 @@ public class SignalPersistenceAdapter implements SignalPersistencePort {
         SignalEntity signalEntity = toEntity(signal);
         SignalEntity saved = signalRepository.save(signalEntity);
         return toDomain(saved);
+    }
+
+    @Override
+    public boolean existsByTxHashAndType(String txHash, String type) {
+        return signalRepository.existsByTxHashAndType(txHash, type);
+    }
+
+    @Override
+    public long countDistinctWhaleBuyersByToken(String tokenAddress, LocalDateTime since) {
+        return signalRepository.countDistinctWalletsByTokenAndTypeAfter(
+                tokenAddress, "WHALE_BUY", since);
+    }
+
+    @Override
+    public List<UUID> findDistinctWhaleBuyersByToken(String tokenAddress, LocalDateTime since) {
+        return signalRepository.findDistinctWalletIdsByTokenAndTypeAfter(
+                tokenAddress, "WHALE_BUY", since);
+    }
+
+    @Override
+    public boolean multiWhaleSignalExistsForToken(String tokenAddress, LocalDateTime since) {
+        return signalRepository.existsByTokenAddressAndTypeAndCreatedAtAfter(
+                tokenAddress, "MULTI_WHALE", since);
     }
 
     private void validateSignal(Signal signal) {
