@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.argus.domain.model.Signal;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +51,30 @@ public class SignalPersistenceAdapter implements SignalPersistencePort {
     public boolean multiWhaleSignalExistsForToken(String tokenAddress, LocalDateTime since) {
         return signalRepository.existsByTokenAddressAndTypeAndCreatedAtAfter(
                 tokenAddress, "MULTI_WHALE", since);
+    }
+
+    @Override
+    public long countBuysByWalletAndToken(UUID walletId, String tokenAddress, LocalDateTime since) {
+        return signalRepository.countByWalletAndTokenAndTypeAfter(
+                walletId, tokenAddress, "WHALE_BUY", since);
+    }
+
+    @Override
+    public long countSellsByWalletAndToken(UUID walletId, String tokenAddress, LocalDateTime since) {
+        return signalRepository.countByWalletAndTokenAndTypeAfter(
+                walletId, tokenAddress, "WHALE_SELL", since);
+    }
+
+    @Override
+    public BigDecimal sumBuyValueByWalletAndToken(UUID walletId, String tokenAddress, LocalDateTime since) {
+        return signalRepository.sumUsdValueByWalletAndTokenAndTypeAfter(
+                walletId, tokenAddress, "WHALE_BUY", since);
+    }
+
+    @Override
+    public boolean accumulationSignalExists(UUID walletId, String tokenAddress, LocalDateTime since) {
+        return signalRepository.existsByWalletIdAndTokenAddressAndTypeAndCreatedAtAfter(
+                walletId, tokenAddress, "ACCUMULATION", since);
     }
 
     private void validateSignal(Signal signal) {

@@ -28,6 +28,8 @@ public class WhaleDetectorService {
     private static final BigDecimal CONFIDENCE_SCORE_HIGH = new BigDecimal("0.95");
     private static final BigDecimal CONFIDENCE_SCORE_MED = new BigDecimal("0.85");
     private static final BigDecimal CONFIDENCE_SCORE_LOW = new BigDecimal("0.70");
+    private static final int ACCUMULATION_THRESHOLD = 3;
+    private static final int ACCUMULATION_WINDOW_HOURS = 72;
 
     private static final int MULTI_WHALE_THRESHOLD = 3;
     private static final int MULTI_WHALE_WINDOW_HOURS = 24;
@@ -54,7 +56,12 @@ public class WhaleDetectorService {
             return Optional.empty();
         }
 
-        BigDecimal confidence = calculateConfidence(request.getUsdValue());
+        if (signalType == SignalType.WHALE_BUY && request.getTokenAddress() != null && request.getWalletId() != null) {
+            checkAndCreateMultiWhaleSignal(request.getTokenAddress());
+            checkAccumulationPattern(request.getWalletId(), request.getTokenAddress());
+        }
+
+        BigDecimal confidence = calculateAccumulationConfidence(request.getUsdValue());
 
         Signal signal = Signal.builder()
                 .type(signalType.name())
@@ -99,7 +106,7 @@ public class WhaleDetectorService {
         return SignalType.WHALE_BUY;
     }
 
-    private BigDecimal calculateConfidence(BigDecimal usdValue) {
+    private BigDecimal calculateAccumulationConfidence(BigDecimal usdValue) {
         if (usdValue.compareTo(CONFIDENCE_TIER_HIGH) >= 0) {
             return CONFIDENCE_SCORE_HIGH;
         }
@@ -107,6 +114,37 @@ public class WhaleDetectorService {
             return CONFIDENCE_SCORE_MED;
         }
         return CONFIDENCE_SCORE_LOW;
+    }
+
+    private void checkAccumulationPattern(UUID walletId, String tokenAddress) {
+        LocalDateTime windowStart = LocalDateTime.now().minusHours(ACCUMULATION_WINDOW_HOURS);
+
+        if (signalPersistencePort.accumulationSignalExists(walletId, tokenAddress, windowStart)) {
+            log.debug("ACCUMULATION signal already exists for wallet: {} token: {}", walletId, tokenAddress);
+            return;
+        }
+
+        long buyCount = signalPersistencePort.countBuysByWalletAndToken(walletId, tokenAddress, windowStart);
+        long sellCount = signalPersistencePort.countSellsByWalletAndToken(walletId, tokenAddress, windowStart);
+
+        if (buyCount >= ACCUMULATION_THRESHOLD && sellCount == 0) {
+            BigDecimal totalPosition = signalPersistencePort.sumBuyValueByWalletAndToken(walletId, tokenAddress,
+                    windowStart);
+
+            Signal accumulationSignal = Signal.builder()
+                    .type(SignalType.ACCUMULATION.name())
+                    .walletId(walletId)
+                    .tokenAddress(tokenAddress)
+                    .chain("ethereum")
+                    .usdValue(totalPosition)
+                    .confidenceScore(calculateAccumulationConfidence(totalPosition))
+                    .metadata(buildAccumulationMetadata(buyCount, totalPosition))
+                    .build();
+
+            signalPersistencePort.save(accumulationSignal);
+            log.info("📈 ACCUMULATION ALERT: Wallet {} buying {} x{} times (${} total) in 72h!",
+                    walletId, tokenAddress, buyCount, totalPosition.setScale(0, RoundingMode.HALF_UP));
+        }
     }
 
     private void checkAndCreateMultiWhaleSignal(String tokenAddress) {
@@ -117,10 +155,10 @@ public class WhaleDetectorService {
             return;
         }
 
-        long whaleCount = signalPersistencePort.countDistinctWhaleBuyersByToken(tokenAddress, windowStart);
+        List<UUID> walletIds = signalPersistencePort.findDistinctWhaleBuyersByToken(tokenAddress, windowStart);
+        long whaleCount = walletIds.size();
 
         if (whaleCount >= MULTI_WHALE_THRESHOLD) {
-            List<UUID> walletIds = signalPersistencePort.findDistinctWhaleBuyersByToken(tokenAddress, windowStart);
 
             Signal multiWhaleSignal = Signal.builder()
                     .type(SignalType.MULTI_WHALE.name())
@@ -138,10 +176,10 @@ public class WhaleDetectorService {
 
     private BigDecimal calculateMultiWhaleConfidence(long whaleCount) {
         if (whaleCount >= 5)
-            return new BigDecimal("0.95");
+            return CONFIDENCE_SCORE_HIGH;
         if (whaleCount >= 4)
-            return new BigDecimal("0.90");
-        return new BigDecimal("0.80"); // 3 whales
+            return CONFIDENCE_SCORE_MED;
+        return CONFIDENCE_SCORE_LOW;
     }
 
     private String buildMultiWhaleMetadata(long whaleCount, List<UUID> walletIds) {
@@ -152,5 +190,19 @@ public class WhaleDetectorService {
         return String.format(
                 "{\"whaleCount\":%d,\"walletIds\":%s,\"windowHours\":%d}",
                 whaleCount, walletIdsJson, MULTI_WHALE_WINDOW_HOURS);
+    }
+
+    private BigDecimal calculateAccumulationConfidence(long buyCount) {
+        if (buyCount >= 5)
+            return CONFIDENCE_SCORE_HIGH;
+        if (buyCount >= 4)
+            return CONFIDENCE_SCORE_MED;
+        return CONFIDENCE_SCORE_LOW;
+    }
+
+    private String buildAccumulationMetadata(long buyCount, BigDecimal totalPosition) {
+        return String.format(
+                "{\"buyCount\":%d,\"totalPositionUsd\":%.2f,\"windowHours\":%d}",
+                buyCount, totalPosition, ACCUMULATION_WINDOW_HOURS);
     }
 }
