@@ -2,6 +2,7 @@ package com.argus.infra.price.adapter;
 
 import com.argus.domain.model.TokenPrice;
 import com.argus.domain.model.TokenPrice.PriceStatus;
+import com.argus.domain.model.TokenPriceRange;
 import com.argus.domain.port.blockchain.PricePort;
 import com.argus.infra.blockchain.dto.response.DexScreenerResponse;
 import com.argus.infra.blockchain.dto.response.DexScreenerResponse.DexPair;
@@ -132,5 +133,11 @@ public class DexScreenerPriceAdapter implements PricePort {
 
     private BigDecimal nullSafe(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    @Override
+    public Optional<TokenPriceRange> getTokenPriceRange(String tokenAddress, LocalDateTime from, LocalDateTime to) {
+        log.warn("DexScreener does not support historical prices. Use CoinGecko instead.");
+        return Optional.empty();
     }
 }

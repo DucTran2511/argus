@@ -60,6 +60,12 @@ public class AssetTransferEntity {
     @Column(name = "tx_timestamp")
     private LocalDateTime txTimestamp;
 
+    @Column(name = "price_at_tx", precision = 20, scale = 8)
+    private BigDecimal priceAtTx;
+
+    @Column(name = "price_source", length = 20)
+    private String priceSource;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

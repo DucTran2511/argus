@@ -24,6 +24,8 @@ public class AssetTransfer {
     private BigDecimal value; // Already decoded amount!
     private String assetSymbol; // "ETH", "USDC", "WETH"
     private String tokenAddress; // Contract address (null for ETH)
+    private BigDecimal priceAtTx;
+    private String priceSource;
     private LocalDateTime txTimestamp;
     private LocalDateTime createdAt;
     private BigDecimal usdValue;
