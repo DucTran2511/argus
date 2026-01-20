@@ -5,6 +5,7 @@ import com.argus.api.dto.WalletRequest;
 import com.argus.api.dto.WalletResponse;
 import com.argus.api.dto.response.SyncResponse;
 import com.argus.api.dto.response.WalletTimelineResponse;
+import com.argus.api.dto.response.WalletStatsResponse;
 import com.argus.domain.model.Wallet;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -96,4 +97,20 @@ public interface WalletApi {
                         @Parameter(description = "Ethereum address", required = true) @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
 
                         @Parameter(description = "Maximum transactions to sync", example = "500") @RequestParam(defaultValue = "500") int maxCount);
+
+        @Operation(summary = "Calculate wallet stats", description = "Calculate and persist PnL, win rate, and ROI statistics for all tokens traded by this wallet. This triggers a full recalculation from transaction history.")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "Stats calculated successfully", content = @Content(schema = @Schema(implementation = WalletStatsResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Wallet not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        })
+        ResponseEntity<WalletStatsResponse> calculateStats(
+                        @Parameter(description = "Wallet UUID", required = true) @PathVariable UUID id);
+
+        @Operation(summary = "Get wallet stats", description = "Retrieve previously calculated PnL, win rate, and ROI statistics. Use calculate-stats first if stats are stale or missing.")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "Stats retrieved successfully", content = @Content(schema = @Schema(implementation = WalletStatsResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Wallet not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        })
+        ResponseEntity<WalletStatsResponse> getStats(
+                        @Parameter(description = "Wallet UUID", required = true) @PathVariable UUID id);
 }

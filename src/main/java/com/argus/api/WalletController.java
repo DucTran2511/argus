@@ -5,10 +5,13 @@ import com.argus.api.dto.WalletResponse;
 import com.argus.api.dto.response.AssetTransferResponse;
 import com.argus.api.dto.response.WalletTimelineResponse;
 import com.argus.api.dto.response.SyncResponse;
+import com.argus.api.dto.response.WalletStatsResponse;
 import com.argus.api.spec.WalletApi;
 import com.argus.domain.model.AssetTransfer;
 import com.argus.domain.model.Wallet;
+import com.argus.domain.model.WalletStatsSummary;
 import com.argus.domain.service.WalletService;
+import com.argus.domain.service.WalletStatsService;
 import com.argus.domain.service.TransactionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -40,6 +43,7 @@ public class WalletController implements WalletApi {
 
         private final WalletService walletService;
         private final TransactionService transactionService;
+        private final WalletStatsService statsService;
 
         @Override
         @PostMapping
@@ -152,5 +156,19 @@ public class WalletController implements WalletApi {
                                 .build();
 
                 return ResponseEntity.ok(response);
+        }
+
+        @PostMapping("/{id}/calculate-stats")
+        public ResponseEntity<WalletStatsResponse> calculateStats(@PathVariable UUID id) {
+                Wallet wallet = walletService.getWalletById(id);
+                WalletStatsSummary summary = statsService.calculateStats(wallet.getAddress());
+                return ResponseEntity.ok(WalletStatsResponse.toResponse(summary));
+        }
+
+        @GetMapping("/{id}/stats")
+        public ResponseEntity<WalletStatsResponse> getStats(@PathVariable UUID id) {
+                Wallet wallet = walletService.getWalletById(id);
+                WalletStatsSummary summary = statsService.getStats(wallet.getAddress());
+                return ResponseEntity.ok(WalletStatsResponse.toResponse(summary));
         }
 }
