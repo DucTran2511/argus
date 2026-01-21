@@ -10,6 +10,7 @@ import com.argus.domain.port.cache.BlockTrackingPort;
 import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.port.persistence.WalletStatsPersistencePort;
+import com.argus.domain.port.persistence.AddressBookPersistencePort;
 import com.argus.domain.service.PriceService;
 import com.argus.domain.service.WhaleDetectorService;
 import com.argus.domain.service.TransactionService;
@@ -19,9 +20,10 @@ import com.argus.domain.service.WalletStatsService;
 
 import com.argus.infra.stream.StreamPublisher;
 
+import java.time.Clock;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 public class DomainServiceConfig {
@@ -70,5 +72,11 @@ public class DomainServiceConfig {
     public WalletStatsService walletStatsService(TransactionPersistencePort transactionPersistencePort,
             WalletStatsPersistencePort walletStatsPersistencePort) {
         return new WalletStatsService(transactionPersistencePort, walletStatsPersistencePort);
+    }
+
+    @Bean
+    public com.argus.domain.service.AddressBookService addressBookService(
+            AddressBookPersistencePort addressBookPersistencePort) {
+        return new com.argus.domain.service.AddressBookService(addressBookPersistencePort, Clock.systemDefaultZone());
     }
 }

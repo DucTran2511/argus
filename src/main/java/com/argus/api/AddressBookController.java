@@ -1,0 +1,74 @@
+package com.argus.api;
+
+import com.argus.api.dto.LabelRequest;
+import com.argus.api.dto.response.LabelResponse;
+import com.argus.api.spec.AddressBookApi;
+import com.argus.domain.model.AddressLabel;
+import com.argus.domain.service.AddressBookService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/address-book")
+@RequiredArgsConstructor
+@Slf4j
+public class AddressBookController implements AddressBookApi {
+
+    private final AddressBookService addressBookService;
+
+    @Override
+    @PostMapping
+    public ResponseEntity<?> addLabel(@Valid @RequestBody LabelRequest request) {
+        log.info("POST /api/v1/address-book - Adding label '{}' to {}", request.getLabel(), request.getAddress());
+        AddressLabel created = addressBookService.addLabel(
+                request.getAddress(), request.getLabel(), request.getCategory());
+        return ResponseEntity.status(HttpStatus.CREATED).body(LabelResponse.fromDomain(created));
+    }
+
+    @Override
+    @GetMapping("/{address}")
+    public ResponseEntity<LabelResponse> getLabels(@PathVariable String address) {
+        log.info("GET /api/v1/address-book/{} - Fetching labels", address);
+        List<AddressLabel> labels = addressBookService.getLabels(address);
+        return ResponseEntity.ok(LabelResponse.fromDomainList(address, labels));
+    }
+
+    @Override
+    @DeleteMapping("/{address}/labels/{label}")
+    public ResponseEntity<Void> removeLabel(@PathVariable String address, @PathVariable String label) {
+        log.info("DELETE /api/v1/address-book/{}/labels/{}", address, label);
+        addressBookService.removeLabel(address, label);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<List<LabelResponse>> searchLabels(
+            @RequestParam(required = false) String label,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String category) {
+
+        log.info("GET /api/v1/address-book - Search: label={}, q={}, category={}", label, q, category);
+        List<AddressLabel> results = addressBookService.search(label, q, category);
+        return ResponseEntity.ok(LabelResponse.fromDomainListGrouped(results));
+    }
+
+    @Override
+    @PostMapping("/import")
+    public ResponseEntity<?> importLabels(@RequestBody List<LabelRequest> requests) {
+        log.info("POST /api/v1/address-book/import - Importing {} labels", requests != null ? requests.size() : 0);
+        List<AddressLabel> toImport = LabelRequest.toDomainList(requests);
+        List<AddressLabel> imported = addressBookService.importLabels(toImport);
+        return ResponseEntity.ok(Map.of(
+                "imported", imported.size(),
+                "total", requests.size(),
+                "skipped", requests.size() - imported.size()));
+    }
+}

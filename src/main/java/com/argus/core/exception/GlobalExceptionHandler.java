@@ -78,4 +78,55 @@ public class GlobalExceptionHandler {
 
                 return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+
+        @ExceptionHandler(LabelNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleLabelNotFound(
+                        LabelNotFoundException ex,
+                        WebRequest request) {
+
+                log.warn("Label not found: {}", ex.getMessage());
+
+                ErrorResponse error = ErrorResponse.of(
+                                ex.getHttpStatus().value(),
+                                ex.getHttpStatus().getReasonPhrase(),
+                                ex.getMessage(),
+                                request.getDescription(false).replace("uri=", ""),
+                                ex.getErrorCode());
+
+                return new ResponseEntity<>(error, ex.getHttpStatus());
+        }
+
+        @ExceptionHandler(MaxLabelsExceededException.class)
+        public ResponseEntity<ErrorResponse> handleMaxLabelsExceeded(
+                        MaxLabelsExceededException ex,
+                        WebRequest request) {
+
+                log.warn("Max labels exceeded: {}", ex.getMessage());
+
+                ErrorResponse error = ErrorResponse.of(
+                                ex.getHttpStatus().value(),
+                                ex.getHttpStatus().getReasonPhrase(),
+                                ex.getMessage(),
+                                request.getDescription(false).replace("uri=", ""),
+                                ex.getErrorCode());
+
+                return new ResponseEntity<>(error, ex.getHttpStatus());
+        }
+
+        @ExceptionHandler(LabelAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleLabelAlreadyExists(
+                        LabelAlreadyExistsException ex,
+                        WebRequest request) {
+
+                log.warn("Label already exists: {}", ex.getMessage());
+
+                ErrorResponse error = ErrorResponse.of(
+                                ex.getHttpStatus().value(),
+                                ex.getHttpStatus().getReasonPhrase(),
+                                ex.getMessage(),
+                                request.getDescription(false).replace("uri=", ""),
+                                ex.getErrorCode());
+
+                return new ResponseEntity<>(error, ex.getHttpStatus());
+        }
 }
