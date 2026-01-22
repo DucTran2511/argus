@@ -129,7 +129,7 @@ public class CoinGeckoPriceAdapter implements PricePort {
             for (JsonNode pricePoint : pricesNode) {
                 if (pricePoint.isArray() && pricePoint.size() >= 2) {
                     long timestampMs = pricePoint.get(0).asLong();
-                    long timestampSec = timestampMs / 1000; // Convert to seconds
+                    long timestampSec = timestampMs / 1000;
                     BigDecimal price = new BigDecimal(pricePoint.get(1).asText());
                     pricesByTimestamp.put(timestampSec, price);
                 }

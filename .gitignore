@@ -16,4 +16,9 @@ build/
 # Environment Variables (NEVER COMMIT!)
 .env
 .env.local
+.env.prod
 
+# Backups (stored on server, not in repo)
+backups/
+*.sql
+*.sql.gz

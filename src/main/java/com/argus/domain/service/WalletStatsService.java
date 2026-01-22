@@ -20,23 +20,31 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class WalletStatsService {
+    private static final int MAX_TRANSACTIONS = 10000;
+
     private final TransactionPersistencePort transactionPersistencePort;
     private final WalletStatsPersistencePort walletStatsPort;
 
     public WalletStatsSummary calculateStats(String walletAddress) {
-        log.info("Calculating stats for wallet {}", walletAddress);
+        String walletLower = walletAddress.toLowerCase();
+        log.info("Calculating stats for wallet {}", walletLower);
 
         List<AssetTransfer> transfers = transactionPersistencePort.findByWalletAddress(
-                walletAddress.toLowerCase(), 10000, "asc");
+                walletLower, MAX_TRANSACTIONS, "asc");
+
+        if (transfers.size() >= MAX_TRANSACTIONS) {
+            log.warn("Wallet {} has {}+ transactions, stats may be incomplete",
+                    walletLower, MAX_TRANSACTIONS);
+        }
 
         List<AssetTransfer> pricedTransfers = transfers.stream()
                 .filter(t -> t.getUsdValue() != null && t.getTokenAddress() != null)
                 .toList();
 
         if (pricedTransfers.isEmpty()) {
-            log.warn("No priced transfers found for wallet: {}", walletAddress);
+            log.warn("No priced transfers found for wallet: {}", walletLower);
             return WalletStatsSummary.builder()
-                    .walletAddress(walletAddress)
+                    .walletAddress(walletLower)
                     .totalPnl(BigDecimal.ZERO)
                     .winRate(BigDecimal.ZERO)
                     .totalTrades(0)
@@ -48,24 +56,26 @@ public class WalletStatsService {
 
         Map<String, List<AssetTransfer>> byToken = pricedTransfers.stream()
                 .collect(Collectors.groupingBy(AssetTransfer::getTokenAddress));
+
         List<WalletStats> tokenStats = new ArrayList<>();
         for (Map.Entry<String, List<AssetTransfer>> entry : byToken.entrySet()) {
             String tokenAddr = entry.getKey();
             List<AssetTransfer> tokenTransfers = entry.getValue();
 
-            WalletStats stats = calculateTokenStats(walletAddress, tokenAddr, tokenTransfers);
+            WalletStats stats = calculateTokenStats(walletLower, tokenAddr, tokenTransfers);
             if (stats != null) {
                 tokenStats.add(stats);
             }
         }
 
         walletStatsPort.saveAll(tokenStats);
-        return buildSummary(walletAddress, tokenStats);
+        return buildSummary(walletLower, tokenStats);
     }
 
     public WalletStatsSummary getStats(String walletAddress) {
-        List<WalletStats> tokenStats = walletStatsPort.findByWalletAddress(walletAddress);
-        return buildSummary(walletAddress, tokenStats);
+        String walletLower = walletAddress.toLowerCase();
+        List<WalletStats> tokenStats = walletStatsPort.findByWalletAddress(walletLower);
+        return buildSummary(walletLower, tokenStats);
     }
 
     private WalletStats calculateTokenStats(String walletAddress, String tokenAddress,
@@ -79,6 +89,11 @@ public class WalletStatsService {
         LocalDateTime lastTx = null;
 
         for (AssetTransfer tx : transfers) {
+            if (tx.getTxTimestamp() == null || tx.getValue() == null) {
+                log.warn("Skipping transfer with missing data: txHash={}", tx.getTxHash());
+                continue;
+            }
+
             if (tokenSymbol == null) {
                 tokenSymbol = tx.getAssetSymbol();
             }
@@ -89,8 +104,11 @@ public class WalletStatsService {
                 lastTx = tx.getTxTimestamp();
             }
 
-            boolean isBuy = walletAddress.equalsIgnoreCase(tx.getTo());
-            boolean isSell = walletAddress.equalsIgnoreCase(tx.getFrom());
+            String txTo = tx.getTo() != null ? tx.getTo().toLowerCase() : "";
+            String txFrom = tx.getFrom() != null ? tx.getFrom().toLowerCase() : "";
+
+            boolean isBuy = walletAddress.equals(txTo);
+            boolean isSell = walletAddress.equals(txFrom);
 
             if (isBuy) {
                 totalBought = totalBought.add(tx.getValue());
@@ -112,8 +130,8 @@ public class WalletStatsService {
                 : BigDecimal.ZERO;
 
         BigDecimal costOfSold = avgBuyPrice.multiply(totalSold);
-
         BigDecimal realizedPnl = proceedsUsd.subtract(costOfSold);
+
         BigDecimal roiPercent = costOfSold.compareTo(BigDecimal.ZERO) > 0
                 ? realizedPnl.divide(costOfSold, 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100))
@@ -122,7 +140,7 @@ public class WalletStatsService {
         boolean isProfitable = realizedPnl.compareTo(BigDecimal.ZERO) > 0;
 
         return WalletStats.builder()
-                .walletAddress(walletAddress.toLowerCase())
+                .walletAddress(walletAddress)
                 .tokenAddress(tokenAddress.toLowerCase())
                 .tokenSymbol(tokenSymbol)
                 .totalBought(totalBought)
@@ -140,30 +158,35 @@ public class WalletStatsService {
     }
 
     private WalletStatsSummary buildSummary(String walletAddress, List<WalletStats> tokenStats) {
-        BigDecimal totalPnl = tokenStats.stream()
-                .map(WalletStats::getRealizedPnl)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPnl = BigDecimal.ZERO;
+        int profitableTrades = 0;
+        BigDecimal roiSum = BigDecimal.ZERO;
+        int closedPositionCount = 0;
+
+        for (WalletStats stats : tokenStats) {
+            totalPnl = totalPnl.add(stats.getRealizedPnl());
+
+            if (Boolean.TRUE.equals(stats.getIsProfitable())) {
+                profitableTrades++;
+            }
+
+            if (stats.getTotalSold().compareTo(BigDecimal.ZERO) > 0) {
+                roiSum = roiSum.add(stats.getRoiPercent());
+                closedPositionCount++;
+            }
+        }
 
         int totalTrades = tokenStats.size();
 
-        int profitableTrades = (int) tokenStats.stream()
-                .filter(s -> Boolean.TRUE.equals(s.getIsProfitable()))
-                .count();
         BigDecimal winRate = totalTrades > 0
                 ? BigDecimal.valueOf(profitableTrades)
                         .divide(BigDecimal.valueOf(totalTrades), 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        List<WalletStats> closedPositions = tokenStats.stream()
-                .filter(s -> s.getTotalSold().compareTo(BigDecimal.ZERO) > 0)
-                .toList();
-
-        BigDecimal avgRoi = closedPositions.isEmpty() ? BigDecimal.ZERO
-                : closedPositions.stream()
-                        .map(WalletStats::getRoiPercent)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .divide(BigDecimal.valueOf(closedPositions.size()), 2, RoundingMode.HALF_UP);
+        BigDecimal avgRoi = closedPositionCount > 0
+                ? roiSum.divide(BigDecimal.valueOf(closedPositionCount), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         return WalletStatsSummary.builder()
                 .walletAddress(walletAddress)

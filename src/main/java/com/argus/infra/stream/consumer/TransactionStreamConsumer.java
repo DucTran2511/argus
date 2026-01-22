@@ -1,6 +1,8 @@
 package com.argus.infra.stream.consumer;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -9,6 +11,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import com.argus.core.constant.StreamKeys;
+import com.argus.domain.model.dto.WhaleDetectionRequest;
+import com.argus.domain.service.WhaleDetectorService;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class TransactionStreamConsumer implements StreamListener<String, MapRecord<String, String, String>> {
 
     private final RedisTemplate<String, String> redisTemplate;
-
-    private static final BigDecimal WHALE_THRESHOLD = new BigDecimal("50000");
+    private final WhaleDetectorService whaleDetectorService;
 
     @PostConstruct
     public void initConsumerGroup() {
@@ -40,7 +43,6 @@ public class TransactionStreamConsumer implements StreamListener<String, MapReco
         try {
             Map<String, String> fields = message.getValue();
             String txHash = fields.get("txHash");
-            String usdValueStr = fields.get("usdValue");
 
             log.debug("Processing transaction for signals: {}", txHash);
 
@@ -54,29 +56,59 @@ public class TransactionStreamConsumer implements StreamListener<String, MapReco
         } catch (Exception e) {
             log.error("Signal detection failed for message {}: {}",
                     message.getId(), e.getMessage());
-            redisTemplate.opsForStream().acknowledge(
-                    StreamKeys.TRANSACTION_STREAM,
-                    StreamKeys.TX_PROCESSOR_GROUP,
-                    message.getId());
         }
     }
 
     private void detectSignals(Map<String, String> fields) {
-        String txHash = fields.get("txHash");
-        String usdValueStr = fields.get("usdValue");
-        String from = fields.get("from");
-        String to = fields.get("to");
+        WhaleDetectionRequest request = buildRequestFromFields(fields);
 
-        if (usdValueStr != null && !usdValueStr.equals("null")) {
-            try {
-                BigDecimal usdValue = new BigDecimal(usdValueStr);
-                if (usdValue.compareTo(WHALE_THRESHOLD) > 0) {
-                    log.info("🐋 WHALE ALERT: ${} transaction detected! tx={}",
-                            usdValue.setScale(2, java.math.RoundingMode.HALF_UP), txHash);
-                }
-            } catch (NumberFormatException e) {
-                log.trace("Could not parse usdValue: {}", usdValueStr);
-            }
+        whaleDetectorService.detectAndSaveWhaleSignal(request)
+                .ifPresent(signal -> log.info("🐋 Signal detected: {} ${} confidence={}",
+                        signal.getType(),
+                        signal.getUsdValue(),
+                        signal.getConfidenceScore()));
+    }
+
+    private WhaleDetectionRequest buildRequestFromFields(Map<String, String> fields) {
+        return WhaleDetectionRequest.builder()
+                .txHash(fields.get("txHash"))
+                .from(fields.get("from"))
+                .to(fields.get("to"))
+                .walletAddress(fields.get("walletAddress"))
+                .tokenAddress(fields.get("tokenAddress"))
+                .tokenSymbol(fields.get("tokenSymbol"))
+                .usdValue(parseBigDecimal(fields.get("usdValue")))
+                .timestamp(parseTimestamp(fields.get("timestamp")))
+                .build();
+    }
+
+    private BigDecimal parseBigDecimal(String value) {
+        if (value == null || value.equals("null") || value.isEmpty())
+            return null;
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.equals("null") || value.isEmpty())
+            return null;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseTimestamp(String value) {
+        if (value == null || value.equals("null") || value.isEmpty())
+            return null;
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

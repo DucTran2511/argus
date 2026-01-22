@@ -16,7 +16,7 @@ public interface SignalRepository extends JpaRepository<SignalEntity, Long> {
         @Query("SELECT COUNT(DISTINCT s.walletId) FROM SignalEntity s " +
                         "WHERE s.tokenAddress = :tokenAddress " +
                         "AND s.type = :type " +
-                        "AND s.createdAt > :since" +
+                        "AND s.createdAt > :since " +
                         "AND s.walletId IS NOT NULL")
         long countDistinctWalletsByTokenAndTypeAfter(
                         @Param("tokenAddress") String tokenAddress,
@@ -26,7 +26,7 @@ public interface SignalRepository extends JpaRepository<SignalEntity, Long> {
         @Query("SELECT DISTINCT s.walletId FROM SignalEntity s " +
                         "WHERE s.tokenAddress = :tokenAddress " +
                         "AND s.type = :type " +
-                        "AND s.createdAt > :since" +
+                        "AND s.createdAt > :since " +
                         "AND s.walletId IS NOT NULL")
         List<UUID> findDistinctWalletIdsByTokenAndTypeAfter(
                         @Param("tokenAddress") String tokenAddress,
