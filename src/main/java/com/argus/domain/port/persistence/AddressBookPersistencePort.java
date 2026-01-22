@@ -3,6 +3,7 @@ package com.argus.domain.port.persistence;
 import com.argus.domain.model.AddressLabel;
 
 import java.util.List;
+import java.util.Set;
 
 public interface AddressBookPersistencePort {
     AddressLabel save(AddressLabel label);
@@ -10,6 +11,8 @@ public interface AddressBookPersistencePort {
     List<AddressLabel> saveAll(List<AddressLabel> labels);
 
     List<AddressLabel> findByAddress(String address);
+
+    List<AddressLabel> findByAddresses(Set<String> addresses);
 
     List<AddressLabel> findByLabel(String label);
 
