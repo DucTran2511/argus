@@ -19,7 +19,10 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.context.annotation.Primary;
+
 @Slf4j
+@Primary
 @Component
 public class DexScreenerPriceAdapter implements PricePort {
 
