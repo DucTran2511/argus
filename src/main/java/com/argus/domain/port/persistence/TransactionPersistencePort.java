@@ -23,4 +23,7 @@ public interface TransactionPersistencePort {
 
     // Count total transfers for a wallet
     long countByWalletAddress(String address);
+
+    // Find transfers by price source (for retry job)
+    List<AssetTransfer> findByPriceSourceIn(List<String> priceSources);
 }

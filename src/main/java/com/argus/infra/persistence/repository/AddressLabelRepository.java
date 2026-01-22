@@ -24,6 +24,8 @@ public interface AddressLabelRepository extends JpaRepository<AddressLabelEntity
 
     long countByAddressIgnoreCase(String address);
 
+    List<AddressLabelEntity> findByAddressIgnoreCaseIn(java.util.Collection<String> addresses);
+
     @Modifying
     @Query("DELETE FROM AddressLabelEntity e WHERE lower(e.address) = lower(:address) AND lower(e.label) = lower(:label)")
     void deleteByAddressAndLabel(@Param("address") String address, @Param("label") String label);

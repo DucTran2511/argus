@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -39,6 +40,17 @@ public class AddressBookPersistenceAdapter implements AddressBookPersistencePort
     @Transactional(readOnly = true)
     public List<AddressLabel> findByAddress(String address) {
         return repository.findByAddressIgnoreCase(address).stream()
+                .map(AddressLabelEntity::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AddressLabel> findByAddresses(Set<String> addresses) {
+        if (addresses == null || addresses.isEmpty()) {
+            return List.of();
+        }
+        return repository.findByAddressIgnoreCaseIn(addresses).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }

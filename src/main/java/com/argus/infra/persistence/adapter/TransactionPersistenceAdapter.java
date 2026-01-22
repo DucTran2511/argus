@@ -91,6 +91,14 @@ public class TransactionPersistenceAdapter implements TransactionPersistencePort
         return assetTransferRepository.countByWalletAddress(address.toLowerCase());
     }
 
+    @Override
+    public List<AssetTransfer> findByPriceSourceIn(List<String> priceSources) {
+        return assetTransferRepository.findByPriceSourceIn(priceSources)
+                .stream()
+                .map(this::toAssetTransferDomain)
+                .toList();
+    }
+
     private AssetTransferEntity toAssetTransferEntity(AssetTransfer domain) {
         return AssetTransferEntity.builder()
                 .walletAddress(domain.getWalletAddress())
@@ -104,6 +112,8 @@ public class TransactionPersistenceAdapter implements TransactionPersistencePort
                 .tokenAddress(domain.getTokenAddress())
                 .txTimestamp(domain.getTxTimestamp())
                 .createdAt(domain.getCreatedAt())
+                .priceAtTx(domain.getPriceAtTx())
+                .priceSource(domain.getPriceSource())
                 .usdValue(domain.getUsdValue())
                 .build();
     }
@@ -122,6 +132,8 @@ public class TransactionPersistenceAdapter implements TransactionPersistencePort
                 .tokenAddress(entity.getTokenAddress())
                 .txTimestamp(entity.getTxTimestamp())
                 .createdAt(entity.getCreatedAt())
+                .priceAtTx(entity.getPriceAtTx())
+                .priceSource(entity.getPriceSource())
                 .usdValue(entity.getUsdValue())
                 .build();
     }

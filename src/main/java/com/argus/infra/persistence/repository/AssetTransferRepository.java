@@ -10,19 +10,21 @@ import java.time.LocalDateTime;
 
 public interface AssetTransferRepository extends JpaRepository<AssetTransferEntity, Long> {
 
-    List<AssetTransferEntity> findByWalletAddressOrderByTxTimestampDesc(
-            String walletAddress,
-            Pageable pageable);
+        List<AssetTransferEntity> findByWalletAddressOrderByTxTimestampDesc(
+                        String walletAddress,
+                        Pageable pageable);
 
-    List<AssetTransferEntity> findByWalletAddressAndTxTimestampBetween(
-            String walletAddress,
-            LocalDateTime start,
-            LocalDateTime end);
+        List<AssetTransferEntity> findByWalletAddressAndTxTimestampBetween(
+                        String walletAddress,
+                        LocalDateTime start,
+                        LocalDateTime end);
 
-    long countByWalletAddress(String walletAddress);
+        long countByWalletAddress(String walletAddress);
 
-    boolean existsByTxHashAndWalletAddressAndCategory(
-            String txHash,
-            String walletAddress,
-            String category);
+        boolean existsByTxHashAndWalletAddressAndCategory(
+                        String txHash,
+                        String walletAddress,
+                        String category);
+
+        List<AssetTransferEntity> findByPriceSourceIn(List<String> priceSources);
 }
