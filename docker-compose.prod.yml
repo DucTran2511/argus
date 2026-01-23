@@ -58,6 +58,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    expose:
+      - "8080"
     networks:
       - argus-network
 
@@ -70,6 +72,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
+    depends_on:
+      - argus
     networks:
       - argus-network
 
