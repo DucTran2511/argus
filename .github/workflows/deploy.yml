@@ -19,6 +19,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/argus
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build --no-deps argus
             docker image prune -f
