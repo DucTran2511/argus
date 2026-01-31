@@ -129,4 +129,21 @@ public class GlobalExceptionHandler {
 
                 return new ResponseEntity<>(error, ex.getHttpStatus());
         }
+
+        @ExceptionHandler(WalletNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleWalletNotFound(
+                        WalletNotFoundException ex,
+                        WebRequest request) {
+
+                log.warn("Wallet not found: {}", ex.getMessage());
+
+                ErrorResponse error = ErrorResponse.of(
+                                ex.getHttpStatus().value(),
+                                ex.getHttpStatus().getReasonPhrase(),
+                                ex.getMessage(),
+                                request.getDescription(false).replace("uri=", ""),
+                                ex.getErrorCode());
+
+                return new ResponseEntity<>(error, ex.getHttpStatus());
+        }
 }

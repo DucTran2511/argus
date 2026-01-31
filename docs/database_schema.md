@@ -1,6 +1,6 @@
 # Argus - Database Schema
 
-> **Last Updated**: 2026-01-09
+> **Last Updated**: 2026-01-30
 
 ## Visual Overview
 
@@ -35,131 +35,48 @@
                               │ total_pnl        │
                               └────────┬─────────┘
                                        │
-              ┌────────────────────────┼────────────────────────┐
-              │                        │                        │
-              ▼ 1:N                    ▼ 1:N                    ▼ 1:N
-    ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-    │  transactions   │      │ asset_transfers │      │    signals      │
-    │ ─────────────── │      │ ─────────────── │      │ ─────────────── │
-    │ tx_hash         │      │ tx_hash         │      │ type            │
-    │ from, to        │      │ wallet_address  │      │ token_address   │
-    │ value, input    │      │ from, to        │      │ confidence      │
-    │ usd_value       │      │ value           │      │ ai_narrative    │
-    │                 │      │ usd_value ←NEW  │      │                 │
-    │                 │      │ asset_symbol    │      │                 │
-    └─────────────────┘      └─────────────────┘      └─────────────────┘
-         Raw TXs              Alchemy Transfers         Trading Signals
+              ┌────────────────────────┼────────────────────────┬────────────────────┐
+              │                        │                        │                    │
+              ▼ 1:N                    ▼ 1:N                    ▼ 1:N                ▼ 1:N
+    ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐   ┌─────────────────┐
+    │  transactions   │      │ asset_transfers │      │    signals      │   │  wallet_stats   │
+    │ ─────────────── │      │ ─────────────── │      │ ─────────────── │   │ ─────────────── │
+    │ tx_hash         │      │ tx_hash         │      │ type            │   │ wallet_address  │
+    │ from, to        │      │ wallet_address  │      │ token_address   │   │ token_address   │
+    │ value, input    │      │ from, to        │      │ confidence      │   │ realized_pnl    │
+    │ usd_value       │      │ value           │      │ ai_narrative    │   │ roi_percent     │
+    │                 │      │ usd_value       │      │                 │   │ is_profitable   │
+    │                 │      │ asset_symbol    │      │                 │   │                 │
+    └─────────────────┘      └─────────────────┘      └─────────────────┘   └────────┬────────┘
+         Raw TXs              Alchemy Transfers         Trading Signals        PnL Analytics
+                                                                                      │
+                                                                                      │ aggregates
+                                                                                      ▼
+                                                                            ┌─────────────────┐
+                                                                            │ wallet_metrics  │
+                                                                            │ ─────────────── │
+                                                                            │ wallet_address  │
+                                                                            │ archetype       │
+                                                                            │ is_blacklisted  │
+                                                                            │ pnl_score       │
+                                                                            │ consistency     │
+                                                                            │ conviction      │
+                                                                            └─────────────────┘
+                                                                             Smart Money Scores
 
-                              ┌──────────────────┐
-                              │     tokens       │
-                              │ ──────────────── │
-                              │ address (PK)     │
-                              │ symbol, name     │
-                              │ liquidity        │
-                              │ risk_score       │
-                              └──────────────────┘
-                                  Token Metadata
-```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ADDRESS BOOK (LABELS)                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 
----
-
-## Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    wallets ||--o{ transactions : has
-    wallets ||--o{ asset_transfers : has
-    wallets ||--o{ signals : generates
-    users ||--o{ alert_rules : owns
-
-    wallets {
-        uuid id PK
-        varchar address UK
-        varchar chain
-        varchar label
-        varchar type
-        decimal total_pnl
-        decimal win_rate
-        timestamp first_seen_at
-        timestamp last_activity_at
-        timestamp created_at
-    }
-
-    tokens {
-        varchar address PK
-        varchar chain
-        varchar symbol
-        varchar name
-        int decimals
-        decimal market_cap
-        decimal liquidity
-        decimal risk_score
-        timestamp created_at
-    }
-
-    transactions {
-        uuid id PK
-        uuid wallet_id FK
-        varchar tx_hash
-        varchar chain
-        varchar type
-        varchar token_in
-        varchar token_out
-        decimal amount_in
-        decimal amount_out
-        decimal usd_value
-        bigint block_number
-        timestamp tx_timestamp
-    }
-
-    asset_transfers {
-        bigint id PK
-        varchar wallet_address FK
-        varchar tx_hash
-        bigint block_number
-        varchar from_address
-        varchar to_address
-        varchar category
-        decimal value
-        decimal usd_value
-        varchar asset_symbol
-        varchar token_address
-        int log_index
-        timestamp tx_timestamp
-        timestamp created_at
-    }
-
-    signals {
-        uuid id PK
-        uuid wallet_id FK
-        varchar type
-        varchar token_address
-        varchar token_symbol
-        varchar chain
-        decimal usd_value
-        decimal confidence_score
-        text ai_narrative
-        jsonb metadata
-        timestamp created_at
-    }
-
-    users {
-        uuid id PK
-        varchar email UK
-        varchar password_hash
-        varchar telegram_chat_id
-        timestamp created_at
-    }
-
-    alert_rules {
-        uuid id PK
-        uuid user_id FK
-        varchar name
-        jsonb conditions
-        jsonb channels
-        boolean enabled
-        timestamp created_at
-    }
+    ┌─────────────────┐                     ┌──────────────────┐
+    │ address_labels  │                     │     tokens       │
+    │ ─────────────── │                     │ ──────────────── │
+    │ address         │                     │ address (PK)     │
+    │ label           │                     │ symbol, name     │
+    │ category        │                     │ liquidity        │
+    │ source          │                     │ risk_score       │
+    └─────────────────┘                     └──────────────────┘
+       Any Address                             Token Metadata
 ```
 
 ---
@@ -175,6 +92,9 @@ erDiagram
 | `users` | Application users | V5 |
 | `alert_rules` | User notification rules | - |
 | `asset_transfers` | Normalized wallet transfers (Alchemy) | V6, V10 |
+| `wallet_stats` | Per-token PnL analytics (Average Cost Method) | V13 |
+| `address_labels` | Address Book - labels for any address (max 5) | V14 |
+| `wallet_metrics` | Smart Money scoring & archetype classification | V15, V16 |
 
 ---
 
@@ -185,6 +105,8 @@ erDiagram
 | `wallets` | `transactions` | 1:N |
 | `wallets` | `asset_transfers` | 1:N (via wallet_address) |
 | `wallets` | `signals` | 1:N |
+| `wallets` | `wallet_stats` | 1:N (via wallet_address) |
+| `wallet_stats` | `wallet_metrics` | N:1 (aggregated per wallet) |
 | `users` | `alert_rules` | 1:N |
 
 ---
@@ -202,6 +124,12 @@ erDiagram
 | asset_transfers | idx_wallet_address | wallet_address |
 | asset_transfers | idx_tx_timestamp | tx_timestamp |
 | asset_transfers | idx_tx_hash | tx_hash |
+| wallet_metrics | idx_wm_archetype | archetype |
+| wallet_metrics | idx_wm_pnl_score | pnl_score DESC |
+| wallet_metrics | idx_wm_consistency | consistency_score DESC |
+| wallet_metrics | idx_wm_conviction | conviction_score DESC |
+| wallet_metrics | idx_wm_tier | tier |
+| wallet_metrics | idx_wm_total_score | total_score DESC |
 
 ---
 
@@ -210,4 +138,12 @@ erDiagram
 | Table | Constraint | Columns | Purpose |
 |-------|------------|---------|---------|
 | asset_transfers | uq_asset_transfer | tx_hash, wallet_address, category, log_index | Prevent duplicate transfers |
+| wallet_metrics | pk_wallet_metrics | wallet_address | One metrics record per wallet |
 
+---
+
+## V16 Migration: total_score & tier
+
+Added composite scoring and tier classification:
+- `total_score`: Weighted combination of pnl_score (50%), consistency_score (30%), conviction_score (20%)
+- `tier`: Letter grade (S/A/B/C) based on total_score thresholds

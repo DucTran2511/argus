@@ -11,12 +11,16 @@ import com.argus.domain.port.persistence.TransactionPersistencePort;
 import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.port.persistence.WalletStatsPersistencePort;
 import com.argus.domain.port.persistence.AddressBookPersistencePort;
+import com.argus.domain.port.persistence.WalletMetricsPersistencePort;
+
 import com.argus.domain.service.PriceService;
 import com.argus.domain.service.WhaleDetectorService;
 import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.HistoricalImportService;
 import com.argus.domain.service.WalletService;
+import com.argus.domain.service.WalletStatsAggregator;
 import com.argus.domain.service.WalletStatsService;
+import com.argus.domain.service.SmartMoneyScoringService;
 
 import com.argus.infra.stream.StreamPublisher;
 
@@ -27,6 +31,11 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DomainServiceConfig {
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone();
+    }
 
     @Bean
     public WalletService walletService(WalletPersistencePort walletPersistencePort,
@@ -76,7 +85,25 @@ public class DomainServiceConfig {
 
     @Bean
     public com.argus.domain.service.AddressBookService addressBookService(
-            AddressBookPersistencePort addressBookPersistencePort) {
-        return new com.argus.domain.service.AddressBookService(addressBookPersistencePort, Clock.systemDefaultZone());
+            AddressBookPersistencePort addressBookPersistencePort,
+            Clock clock) {
+        return new com.argus.domain.service.AddressBookService(addressBookPersistencePort, clock);
+    }
+
+    @Bean
+    public SmartMoneyScoringService smartMoneyScoringService(
+            WalletStatsPersistencePort walletStatsPort,
+            TransactionPersistencePort transactionPort,
+            WalletMetricsPersistencePort walletMetricsPort,
+            WalletStatsAggregator walletStatsAggregator,
+            Clock clock) {
+        return new SmartMoneyScoringService(walletStatsPort, transactionPort,
+                walletMetricsPort, walletStatsAggregator, clock);
+    }
+
+    @Bean
+    public WalletStatsAggregator walletStatsAggregator(
+            WalletStatsPersistencePort walletStatsPort) {
+        return new WalletStatsAggregator(walletStatsPort);
     }
 }

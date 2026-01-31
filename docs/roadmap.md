@@ -182,31 +182,31 @@ argus/
 - [X] Add error handling and retry logic
 
 #### Day 17 (3 hrs) - Whale Detection Logic
-- [ ] Define whale threshold ($50K+)
-- [ ] Create `WhaleDetectorService`
-- [ ] Implement `isWhaleTrade(transaction)` logic
-- [ ] Generate WHALE_BUY / WHALE_SELL signals
-- [ ] Store signals in database
+- [X] Define whale threshold ($50K+)
+- [X] Create `WhaleDetectorService`
+- [X] Implement `isWhaleTrade(transaction)` logic
+- [X] Generate WHALE_BUY / WHALE_SELL signals
+- [X] Store signals in database
 
 #### Day 18 (3 hrs) - Signal Data Model
-- [ ] Enhance `Signal` entity with all fields
-- [ ] Add signal types enum
-- [ ] Create `SignalRepository` with queries
-- [ ] Add signal metadata (JSON field)
+- [X] Enhance `Signal` entity with all fields
+- [X] Add signal types enum
+- [X] Create `SignalRepository` with queries
+- [X] Add signal metadata (JSON field)
 - [ ] Test signal creation flow
 
 #### Day 19 (3 hrs) - Multi-Whale Detection
-- [ ] Track whale activity per token (24h window)
-- [ ] Detect when 3+ whales buy same token
-- [ ] Generate MULTI_WHALE signal
-- [ ] Add correlation logic
+- [X] Track whale activity per token (24h window)
+- [X] Detect when 3+ whales buy same token
+- [X] Generate MULTI_WHALE signal
+- [X] Add correlation logic
 - [ ] Test with mock data
 
 #### Day 20 (3 hrs) - Accumulation Pattern
-- [ ] Track wallet-token buy history
-- [ ] Detect 3+ buys without sells (72h)
-- [ ] Calculate total position size
-- [ ] Generate ACCUMULATION signal
+- [X] Track wallet-token buy history
+- [X] Detect 3+ buys without sells (72h)
+- [X] Calculate total position size
+- [X] Generate ACCUMULATION signal
 - [ ] Test pattern detection
 
 #### Day 21 (3 hrs) - Week 3 Review
@@ -220,54 +220,79 @@ argus/
 
 ### Week 4: Wallet Intelligence
 
-#### Day 22 (3 hrs) - Wallet Statistics
-- [ ] Implement PnL calculation
-- [ ] Calculate win rate (profitable trades %)
-- [ ] Calculate average ROI
-- [ ] Store wallet stats in DB
-- [ ] Schedule daily recalculation job
+#### Day 22 (3 hrs) - Historical Data Import & Price Tracking
+- [x] Add `price_at_tx` column to asset_transfers (V12 migration)
+- [x] Fetch past 30 days of transactions for tracked wallets
+- [x] Enrich with USD price at transaction time
+- [x] Bulk import with batch processing
+- [x] Verify data accuracy
 
-#### Day 23 (3 hrs) - Wallet Labeling System
-- [ ] Create `WalletLabel` entity
-- [ ] Implement manual labeling API
-- [ ] Import known wallet labels (CSV)
-- [ ] Add label search & filter
-- [ ] Build label management UI (later)
+#### Day 23 (3 hrs) - Wallet Statistics 
+- [X] Create `wallet_stats` table (V13 migration)
+- [X] Implement PnL calculation (realized only, Average Cost Method)
+- [X] Calculate win rate (profitable trades %)
+- [X] Calculate average ROI per position
+- [X] Store wallet stats in DB
+- [X] Add API endpoints: POST /{id}/calculate-stats, GET /{id}/stats
+- [X] Add WalletStatsResponse DTO with per-token breakdown
 
-#### Day 24 (3 hrs) - Smart Money Scoring
-- [ ] Define smart money criteria
-- [ ] Implement `calculateSmartMoneyScore(wallet)`
-- [ ] Weight: win rate, ROI, consistency
-- [ ] Rank wallets by score
-- [ ] Auto-flag high performers
 
-#### Day 25 (3 hrs) - Historical Data Import
-- [ ] Fetch past 30 days of transactions for tracked wallets
-- [ ] Bulk import and process
-- [ ] Calculate historical stats
-- [ ] Backfill missing price data
-- [ ] Verify data accuracy
+#### Day 24 (3 hrs) - Wallet Labeling System
+- [x] Create `address_labels` table (V14 migration) - Address Book pattern
+- [x] Implement `AddressBookService` with CRUD + bulk import
+- [x] Add domain exceptions: `LabelNotFoundException`, `MaxLabelsExceededException`, `LabelAlreadyExistsException`
+- [x] Create `AddressBookController` with REST API
+- [x] Import known entity labels (CSV seed data)
+- [x] Add label search & filter (unified `search()` method)
 
-#### Day 26 (3 hrs) - Token Analysis
-- [ ] Create `Token` entity with metadata
-- [ ] Fetch token info (name, symbol, decimals)
-- [ ] Calculate holder count
-- [ ] Track whale holder percentage
-- [ ] Add liquidity metrics
+#### Day 25 (3 hrs) - Smart Money Scoring
+- [x] Create `wallet_metrics` table (V15 migration) with archetype classification
+- [x] Implement `SmartMoneyScoringService` with waterfall archetype classification:
+  - MEV_BOT → WHALE → ACCUMULATOR → HOME_RUN → SNIPER → UNKNOWN
+- [x] Calculate raw metrics from transfer history (profit factor, max ROI, hold time)
+- [x] Implement 3 scoring dimensions:
+  - PnL Score (logarithmic scale 0-100)
+  - Consistency Score (win rate + trade volume)  
+  - Conviction Score (buy dominance × hold time)
+- [x] Create `WalletStatsAggregator` domain service (refactored from adapter)
+- [x] Fix N+1 query in `WalletStatsPersistenceAdapter.saveAll()` with batch upsert
+- [x] Add address normalization and null-safety to persistence adapter
 
-#### Day 27 (3 hrs) - Risk Scoring
-- [ ] Define risk criteria (age, liquidity, holders)
-- [ ] Implement `calculateRiskScore(token)`
-- [ ] Categories: Low, Medium, High, Critical
-- [ ] Add to signal output
-- [ ] Test with known rug pulls
 
-#### Day 28 (3 hrs) - Phase 2 Review
-- [ ] Full pipeline integration test
-- [ ] Validate signal quality
-- [ ] Performance benchmarks
-- [ ] Documentation update
-- [ ] Plan Phase 3
+#### Day 26 (3 hrs) - Smart Money API & Scheduled Jobs
+- [x] Create `SmartMoneyController` with REST endpoints:
+  - `GET /api/smart-money` - List all scored wallets (paginated, filterable by archetype)
+  - `GET /api/smart-money/{address}` - Get wallet metrics & archetype
+  - `GET /api/smart-money/top` - Top wallets by score (configurable: pnl/consistency/conviction)
+  - `POST /api/smart-money/{address}/refresh` - Manually trigger metrics recalculation
+- [x] Create `SmartMoneyRefreshJob` (scheduled @Cron daily at 2AM UTC)
+  - Call `SmartMoneyScoringService.refreshAllMetrics()`
+  - Log summary: total processed, errors, time elapsed
+- [x] Add SmartMoneyResponse DTO with tier badge (S/A/B/C)
+- [x] Write API tests for all endpoints
+- [x] Create `SmartMoneyApi` OpenAPI interface (`src/main/java/com/argus/api/spec/`)
+- [x] Add `WalletNotFoundException` handler to `GlobalExceptionHandler`
+
+#### Day 27 (3 hrs) - Smart Money Signal Integration
+- [ ] Enhance signal generation to include wallet archetype context:
+  - When SNIPER wallet buys → Generate `SNIPER_ALPHA` signal
+  - When WHALE + HOME_RUN buy same token → Generate `SMART_MONEY_CONVERGENCE` signal
+- [ ] Create `SmartMoneySignalEnricher` service
+  - Lookup wallet metrics when processing transactions
+  - Attach archetype + scores to signal metadata
+- [ ] Add filtering: Optionally ignore MEV_BOT transactions from alerts
+- [ ] Update signal response DTOs with smart money context
+
+#### Day 28 (3 hrs) - Week 4 Integration & Verification
+- [ ] Full pipeline integration test:
+  1. Track wallet → Sync history → Calculate PnL → Score wallet → Generate signal
+- [ ] Verify scoring accuracy with known wallets (find 3 real "sniper" wallets on Etherscan)
+- [ ] Performance benchmark: Time to score 1000 wallets
+- [ ] Create `docs/smart_money_scoring.md` documenting:
+  - Archetype definitions & criteria
+  - Scoring formulas explained
+  - API reference
+- [ ] Plan Week 5 (Alerts & Notifications)
 
 ---
 
