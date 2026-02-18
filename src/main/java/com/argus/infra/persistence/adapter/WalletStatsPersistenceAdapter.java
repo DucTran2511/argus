@@ -4,13 +4,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.argus.domain.model.WalletStats;
-import com.argus.domain.model.WalletStatsSummary;
 import com.argus.domain.port.persistence.WalletStatsPersistencePort;
 import com.argus.infra.persistence.entity.WalletStatsEntity;
 import com.argus.infra.persistence.repository.WalletStatsRepository;
@@ -26,8 +27,11 @@ public class WalletStatsPersistenceAdapter implements WalletStatsPersistencePort
     @Override
     @Transactional
     public WalletStats save(WalletStats stats) {
+        String normalizedWallet = normalizeAddress(stats.getWalletAddress());
+        String normalizedToken = normalizeAddress(stats.getTokenAddress());
+
         Optional<WalletStatsEntity> existing = repository
-                .findByWalletAddressAndTokenAddress(stats.getWalletAddress(), stats.getTokenAddress());
+                .findByWalletAddressAndTokenAddress(normalizedWallet, normalizedToken);
 
         WalletStatsEntity entity = existing.orElse(new WalletStatsEntity());
         updateEntity(entity, stats);
@@ -38,93 +42,88 @@ public class WalletStatsPersistenceAdapter implements WalletStatsPersistencePort
     @Override
     @Transactional
     public List<WalletStats> saveAll(List<WalletStats> statsList) {
-        return statsList.stream().map(this::save).toList();
+        if (statsList == null || statsList.isEmpty()) {
+            return List.of();
+        }
+
+        // FIX: Batch upsert to avoid N+1 queries
+        // Step 1: Collect all unique wallet+token pairs
+        List<String[]> keys = statsList.stream()
+                .map(s -> new String[] {
+                        normalizeAddress(s.getWalletAddress()),
+                        normalizeAddress(s.getTokenAddress())
+                })
+                .toList();
+
+        // Step 2: Fetch all existing entities in ONE query
+        List<String> walletAddresses = keys.stream().map(k -> k[0]).distinct().toList();
+        List<WalletStatsEntity> existingEntities = repository.findByWalletAddressIn(walletAddresses);
+
+        // Step 3: Build lookup map
+        Map<String, WalletStatsEntity> existingMap = existingEntities.stream()
+                .collect(Collectors.toMap(
+                        e -> buildKey(e.getWalletAddress(), e.getTokenAddress()),
+                        Function.identity()));
+
+        // Step 4: Prepare entities for batch save
+        List<WalletStatsEntity> toSave = new ArrayList<>();
+        for (WalletStats stats : statsList) {
+            String key = buildKey(
+                    normalizeAddress(stats.getWalletAddress()),
+                    normalizeAddress(stats.getTokenAddress()));
+
+            WalletStatsEntity entity = existingMap.getOrDefault(key, new WalletStatsEntity());
+            updateEntity(entity, stats);
+            toSave.add(entity);
+        }
+
+        // Step 5: Batch save (Hibernate batching configured in application.properties)
+        return repository.saveAll(toSave).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
     public List<WalletStats> findByWalletAddress(String walletAddress) {
-        return repository.findByWalletAddress(walletAddress.toLowerCase())
+        return repository.findByWalletAddress(normalizeAddress(walletAddress))
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
     public Optional<WalletStats> findByWalletAndToken(String walletAddress, String tokenAddress) {
         return repository.findByWalletAddressAndTokenAddress(
-                walletAddress.toLowerCase(), tokenAddress.toLowerCase())
+                normalizeAddress(walletAddress),
+                normalizeAddress(tokenAddress))
                 .map(this::toDomain);
     }
 
     @Override
     public long countByWallet(String walletAddress) {
-        return repository.countByWalletAddress(walletAddress.toLowerCase());
+        return repository.countByWalletAddress(normalizeAddress(walletAddress));
     }
 
     @Override
     public long countProfitableByWallet(String walletAddress) {
-        return repository.countByWalletAddressAndIsProfitableTrue(walletAddress.toLowerCase());
+        return repository.countByWalletAddressAndIsProfitableTrue(normalizeAddress(walletAddress));
     }
 
     @Override
-    public WalletStatsSummary getStatsAggregated(String walletAddress) {
-        List<WalletStats> tokenStats = findByWalletAddress(walletAddress);
-
-        if (tokenStats.isEmpty()) {
-            return null;
-        }
-
-        BigDecimal totalPnl = BigDecimal.ZERO;
-        int profitableTrades = 0;
-        BigDecimal roiSum = BigDecimal.ZERO;
-        int closedPositionCount = 0;
-
-        for (WalletStats stats : tokenStats) {
-            if (stats.getRealizedPnl() != null) {
-                totalPnl = totalPnl.add(stats.getRealizedPnl());
-            }
-
-            if (Boolean.TRUE.equals(stats.getIsProfitable())) {
-                profitableTrades++;
-            }
-
-            if (stats.getTotalSold() != null && stats.getTotalSold().compareTo(BigDecimal.ZERO) > 0) {
-                if (stats.getRoiPercent() != null) {
-                    roiSum = roiSum.add(stats.getRoiPercent());
-                }
-                closedPositionCount++;
-            }
-        }
-
-        int totalTrades = tokenStats.size();
-
-        BigDecimal winRate = totalTrades > 0
-                ? BigDecimal.valueOf(profitableTrades)
-                        .divide(BigDecimal.valueOf(totalTrades), 4, RoundingMode.HALF_UP)
-                        .multiply(BigDecimal.valueOf(100))
-                : BigDecimal.ZERO;
-
-        BigDecimal avgRoi = closedPositionCount > 0
-                ? roiSum.divide(BigDecimal.valueOf(closedPositionCount), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-
-        return WalletStatsSummary.builder()
-                .walletAddress(walletAddress.toLowerCase())
-                .totalPnl(totalPnl)
-                .winRate(winRate)
-                .totalTrades(totalTrades)
-                .profitableTrades(profitableTrades)
-                .avgRoiPercent(avgRoi)
-                .tokenStats(tokenStats)
-                .build();
-    }
-
-    @Override
+    @Transactional(readOnly = true)
     public List<String> findActiveWalletAddresses(int page, int size) {
         return repository.findDistinctWalletAddresses(PageRequest.of(page, size));
     }
 
+    private String normalizeAddress(String address) {
+        return address != null ? address.toLowerCase() : null;
+    }
+
+    private String buildKey(String wallet, String token) {
+        return wallet + "|" + token;
+    }
+
     private void updateEntity(WalletStatsEntity entity, WalletStats stats) {
-        entity.setWalletAddress(stats.getWalletAddress().toLowerCase());
-        entity.setTokenAddress(stats.getTokenAddress().toLowerCase());
+        entity.setWalletAddress(normalizeAddress(stats.getWalletAddress()));
+        entity.setTokenAddress(normalizeAddress(stats.getTokenAddress()));
         entity.setTokenSymbol(stats.getTokenSymbol());
         entity.setTotalBought(stats.getTotalBought());
         entity.setTotalSold(stats.getTotalSold());

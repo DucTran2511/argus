@@ -29,11 +29,13 @@ public class WalletMetrics {
     private BigDecimal pnlScore;
     private BigDecimal consistencyScore;
     private BigDecimal convictionScore;
+    private BigDecimal totalScore;
+    private String tier;
     private LocalDateTime lastTradeAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public String getTier(BigDecimal score) {
+    public String getSpecificTier(BigDecimal score) {
         if (score == null)
             return "C";
         if (score.compareTo(BigDecimal.valueOf(80)) >= 0)
@@ -46,14 +48,14 @@ public class WalletMetrics {
     }
 
     public String getPnlTier() {
-        return getTier(pnlScore);
+        return getSpecificTier(pnlScore);
     }
 
     public String getConsistencyTier() {
-        return getTier(consistencyScore);
+        return getSpecificTier(consistencyScore);
     }
 
     public String getConvictionTier() {
-        return getTier(convictionScore);
+        return getSpecificTier(convictionScore);
     }
 }

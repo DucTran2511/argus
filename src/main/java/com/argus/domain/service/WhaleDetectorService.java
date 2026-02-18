@@ -20,6 +20,8 @@ import com.argus.domain.model.dto.WhaleDetectionRequest;
 @RequiredArgsConstructor
 public class WhaleDetectorService {
     private final SignalPersistencePort signalPersistencePort;
+    private final SmartMoneySignalEnricher smartMoneySignalEnricher;
+    private final com.argus.domain.port.persistence.WalletMetricsPersistencePort walletMetricsPersistencePort;
 
     private static final BigDecimal WHALE_THRESHOLD = new BigDecimal("50000");
     private static final int SIGNAL_WINDOW_MINUTES = 10;
@@ -56,8 +58,17 @@ public class WhaleDetectorService {
             return Optional.empty();
         }
 
+        if (request.getWalletAddress() != null) {
+            Optional<com.argus.domain.model.WalletMetrics> metrics = walletMetricsPersistencePort
+                    .findByWalletAddress(request.getWalletAddress().toLowerCase());
+            if (metrics.isPresent()
+                    && metrics.get().getArchetype() == com.argus.domain.model.SmartMoneyArchetype.MEV_BOT) {
+                log.debug("Ignoring signal from MEV_BOT: {}", request.getWalletAddress());
+                return Optional.empty();
+            }
+        }
+
         if (signalType == SignalType.WHALE_BUY && request.getTokenAddress() != null && request.getWalletId() != null) {
-            checkAndCreateMultiWhaleSignal(request.getTokenAddress());
             checkAccumulationPattern(request.getWalletId(), request.getTokenAddress());
         }
 
@@ -65,6 +76,7 @@ public class WhaleDetectorService {
 
         Signal signal = Signal.builder()
                 .type(signalType.name())
+                .walletId(request.getWalletId())
                 .tokenAddress(request.getTokenAddress())
                 .tokenSymbol(request.getTokenSymbol())
                 .chain("ethereum")
@@ -76,6 +88,8 @@ public class WhaleDetectorService {
         Signal saved = signalPersistencePort.save(signal);
         log.info("🐋 Whale signal saved: {} ${} tx={}", signalType,
                 request.getUsdValue().setScale(0, RoundingMode.HALF_UP), request.getTxHash());
+
+        smartMoneySignalEnricher.enrichAndCheckAlpha(saved, request.getWalletAddress(), request.getWalletId());
 
         if (signalType == SignalType.WHALE_BUY && request.getTokenAddress() != null) {
             checkAndCreateMultiWhaleSignal(request.getTokenAddress());

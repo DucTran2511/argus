@@ -12,6 +12,8 @@ public interface SignalPersistencePort {
 
     boolean existsByTxHashAndType(String txHash, String type);
 
+    List<Signal> findAll(boolean includeMev, int limit);
+
     long countDistinctWhaleBuyersByToken(String tokenAddress, LocalDateTime since);
 
     List<UUID> findDistinctWhaleBuyersByToken(String tokenAddress, LocalDateTime since);
@@ -25,4 +27,7 @@ public interface SignalPersistencePort {
     BigDecimal sumBuyValueByWalletAndToken(UUID walletId, String tokenAddress, LocalDateTime since);
 
     boolean accumulationSignalExists(UUID walletId, String tokenAddress, LocalDateTime since);
+
+    List<com.argus.domain.model.SmartMoneyArchetype> findArchetypesByTokenAndCreatedAtAfter(
+            String tokenAddress, LocalDateTime since, UUID currentWalletId);
 }

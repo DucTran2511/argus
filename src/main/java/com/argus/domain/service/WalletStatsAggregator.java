@@ -19,10 +19,6 @@ public class WalletStatsAggregator {
     public Optional<WalletStatsSummary> aggregateStats(String walletAddress) {
         List<WalletStats> tokenStats = walletStatsPort.findByWalletAddress(walletAddress);
 
-        if (tokenStats.isEmpty()) {
-            return Optional.empty();
-        }
-
         BigDecimal totalPnl = BigDecimal.ZERO;
         BigDecimal grossProfit = BigDecimal.ZERO;
         BigDecimal grossLoss = BigDecimal.ZERO;

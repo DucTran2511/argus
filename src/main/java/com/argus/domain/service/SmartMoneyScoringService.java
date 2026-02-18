@@ -284,14 +284,35 @@ public class SmartMoneyScoringService {
                 BigDecimal buyDominance = metrics.getBuyVolUsd().divide(totalVol, 4, RoundingMode.HALF_UP);
 
                 int holdTimeDays = metrics.getAvgHoldTimeSec() != null ? metrics.getAvgHoldTimeSec() / 86400 : 0;
-                BigDecimal holdTimeBoost = BigDecimal.valueOf(holdTimeDays * 2)
-                        .min(BigDecimal.valueOf(100));
+                BigDecimal holdTimeBoost = BigDecimal.valueOf(holdTimeDays * 2).min(BigDecimal.valueOf(100));
 
-                convictionScore = buyDominance.multiply(holdTimeBoost)
-                        .setScale(2, RoundingMode.HALF_UP);
+                convictionScore = buyDominance.multiply(holdTimeBoost).setScale(2, RoundingMode.HALF_UP);
             }
         }
         metrics.setConvictionScore(convictionScore);
+
+        BigDecimal weightedPnL = pnlScore.multiply(new BigDecimal("0.5"));
+        BigDecimal weightedCons = consistencyScore.multiply(new BigDecimal("0.3"));
+        BigDecimal weightedConv = convictionScore.multiply(new BigDecimal("0.2"));
+
+        BigDecimal totalScore = weightedPnL.add(weightedCons).add(weightedConv)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        metrics.setTotalScore(totalScore);
+        metrics.setTier(classifyTier(totalScore));
+    }
+
+    private String classifyTier(BigDecimal score) {
+        if (score == null)
+            return "C";
+        double val = score.doubleValue();
+        if (val >= 85.0)
+            return "S";
+        if (val >= 70.0)
+            return "A";
+        if (val >= 50.0)
+            return "B";
+        return "C";
     }
 
     public int refreshAllMetrics() {

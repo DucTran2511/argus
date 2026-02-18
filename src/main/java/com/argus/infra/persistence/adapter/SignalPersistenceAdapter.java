@@ -3,8 +3,10 @@ package com.argus.infra.persistence.adapter;
 import com.argus.domain.port.persistence.SignalPersistencePort;
 import com.argus.infra.persistence.entity.SignalEntity;
 import com.argus.infra.persistence.repository.SignalRepository;
+import com.argus.domain.model.SmartMoneyArchetype;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 
 import com.argus.domain.model.Signal;
@@ -28,6 +30,14 @@ public class SignalPersistenceAdapter implements SignalPersistencePort {
         SignalEntity signalEntity = toEntity(signal);
         SignalEntity saved = signalRepository.save(signalEntity);
         return toDomain(saved);
+    }
+
+    @Override
+    public List<Signal> findAll(boolean includeMev, int limit) {
+        return signalRepository.findAllSignals(includeMev, org.springframework.data.domain.PageRequest.of(0, limit))
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
@@ -75,6 +85,21 @@ public class SignalPersistenceAdapter implements SignalPersistencePort {
     public boolean accumulationSignalExists(UUID walletId, String tokenAddress, LocalDateTime since) {
         return signalRepository.existsByWalletIdAndTokenAddressAndTypeAndCreatedAtAfter(
                 walletId, tokenAddress, "ACCUMULATION", since);
+    }
+
+    @Override
+    public List<SmartMoneyArchetype> findArchetypesByTokenAndCreatedAtAfter(
+            String tokenAddress, LocalDateTime since, UUID currentWalletId) {
+        return signalRepository.findArchetypesByTokenAndCreatedAtAfter(tokenAddress, since, currentWalletId).stream()
+                .map(this::toDomainArchetype)
+                .toList();
+    }
+
+    private SmartMoneyArchetype toDomainArchetype(
+            com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype archetype) {
+        if (archetype == null)
+            return SmartMoneyArchetype.UNKNOWN;
+        return SmartMoneyArchetype.valueOf(archetype.name());
     }
 
     private void validateSignal(Signal signal) {

@@ -14,6 +14,7 @@ import com.argus.domain.port.persistence.AddressBookPersistencePort;
 import com.argus.domain.port.persistence.WalletMetricsPersistencePort;
 
 import com.argus.domain.service.PriceService;
+import com.argus.domain.service.SmartMoneySignalEnricher;
 import com.argus.domain.service.WhaleDetectorService;
 import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.HistoricalImportService;
@@ -63,9 +64,18 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public WhaleDetectorService whaleDetectorService(
+    public SmartMoneySignalEnricher smartMoneySignalEnricher(
+            WalletMetricsPersistencePort walletMetricsPersistencePort,
             SignalPersistencePort signalPersistencePort) {
-        return new WhaleDetectorService(signalPersistencePort);
+        return new SmartMoneySignalEnricher(walletMetricsPersistencePort, signalPersistencePort);
+    }
+
+    @Bean
+    public WhaleDetectorService whaleDetectorService(
+            SignalPersistencePort signalPersistencePort,
+            SmartMoneySignalEnricher smartMoneySignalEnricher,
+            WalletMetricsPersistencePort walletMetricsPersistencePort) {
+        return new WhaleDetectorService(signalPersistencePort, smartMoneySignalEnricher, walletMetricsPersistencePort);
     }
 
     @Bean

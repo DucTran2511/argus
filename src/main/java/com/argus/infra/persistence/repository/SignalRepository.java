@@ -7,10 +7,20 @@ import com.argus.infra.persistence.entity.SignalEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.UUID;
 
 public interface SignalRepository extends JpaRepository<SignalEntity, Long> {
+
+        @Query("SELECT s FROM SignalEntity s " +
+                        "LEFT JOIN WalletEntity w ON s.walletId = w.id " +
+                        "LEFT JOIN WalletMetricsEntity wm ON w.address = wm.walletAddress " +
+                        "WHERE (:includeMev = true OR wm.archetype IS NULL OR wm.archetype != com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype.MEV_BOT) "
+                        +
+                        "ORDER BY s.createdAt DESC")
+        List<SignalEntity> findAllSignals(@Param("includeMev") boolean includeMev, Pageable pageable);
+
         boolean existsByTxHashAndType(String txHash, String type);
 
         @Query("SELECT COUNT(DISTINCT s.walletId) FROM SignalEntity s " +
@@ -61,4 +71,18 @@ public interface SignalRepository extends JpaRepository<SignalEntity, Long> {
         boolean existsByWalletIdAndTokenAddressAndTypeAndCreatedAtAfter(
                         UUID walletId, String tokenAddress, String type, LocalDateTime since);
 
+        @Query("SELECT DISTINCT wm.archetype FROM SignalEntity s " +
+                        "JOIN WalletEntity w ON s.walletId = w.id " +
+                        "JOIN WalletMetricsEntity wm ON w.address = wm.walletAddress " +
+                        "WHERE s.tokenAddress = :tokenAddress " +
+                        "AND s.createdAt > :since " +
+                        "AND wm.archetype IN (com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype.WHALE, "
+                        +
+                        "com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype.SNIPER, " +
+                        "com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype.HOME_RUN) " +
+                        "AND s.walletId != :currentWalletId")
+        List<com.argus.infra.persistence.entity.WalletMetricsEntity.Archetype> findArchetypesByTokenAndCreatedAtAfter(
+                        @Param("tokenAddress") String tokenAddress,
+                        @Param("since") LocalDateTime since,
+                        @Param("currentWalletId") UUID currentWalletId);
 }
