@@ -1,6 +1,6 @@
 # Argus - Database Schema
 
-> **Last Updated**: 2026-01-30
+> **Last Updated**: 2026-02-18
 
 ## Visual Overview
 
@@ -130,6 +130,7 @@
 | wallet_metrics | idx_wm_conviction | conviction_score DESC |
 | wallet_metrics | idx_wm_tier | tier |
 | wallet_metrics | idx_wm_total_score | total_score DESC |
+| signals | idx_signals_token_created | token_address, created_at DESC |
 
 ---
 
@@ -147,3 +148,8 @@
 Added composite scoring and tier classification:
 - `total_score`: Weighted combination of pnl_score (50%), consistency_score (30%), conviction_score (20%)
 - `tier`: Letter grade (S/A/B/C) based on total_score thresholds
+
+## V17 Migration: Signal Convergence Index
+
+Added composite index for efficient convergence detection:
+- `idx_signals_token_created(token_address, created_at DESC)` — Supports `SmartMoneySignalEnricher` lookups to find which archetypes bought the same token within a 12-hour window.

@@ -94,8 +94,8 @@ HTTP → WalletController → WalletService → PersistencePort → PostgreSQL
 com.argus/
 ├── core/                    # Utilities, exceptions
 ├── domain/                  # PURE BUSINESS LOGIC
-│   ├── model/               # Wallet, Signal, Token
-│   ├── service/             # SignalDetector, WalletAnalyzer
+│   ├── model/               # Wallet, Signal, SignalType, WalletMetrics
+│   ├── service/             # WhaleDetectorService, SmartMoneySignalEnricher, SmartMoneyScoringService
 │   ├── port/                # Interfaces only
 │   └── event/               # Domain events
 ├── infra/                   # Adapters

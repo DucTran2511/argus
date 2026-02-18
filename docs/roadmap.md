@@ -274,14 +274,20 @@ argus/
 - [x] Add `WalletNotFoundException` handler to `GlobalExceptionHandler`
 
 #### Day 27 (3 hrs) - Smart Money Signal Integration
-- [ ] Enhance signal generation to include wallet archetype context:
-  - When SNIPER wallet buys → Generate `SNIPER_ALPHA` signal
-  - When WHALE + HOME_RUN buy same token → Generate `SMART_MONEY_CONVERGENCE` signal
-- [ ] Create `SmartMoneySignalEnricher` service
+- [x] Add `SNIPER_ALPHA`, `SMART_MONEY_CONVERGENCE`, `HIGH_CONVICTION_BET` to `SignalType` enum
+- [x] Enhance signal generation to include wallet archetype context:
+  - When SNIPER wallet buys → Generate `SNIPER_ALPHA` signal (chain-aware: $500 ETH L1, $100 L2s)
+  - When SNIPER + WHALE buy same token within 12h → `SMART_MONEY_CONVERGENCE` (confidence 0.90)
+  - When WHALE + HOME_RUN buy same token within 12h → `HIGH_CONVICTION_BET` (confidence 0.75)
+- [x] Create `SmartMoneySignalEnricher` service
   - Lookup wallet metrics when processing transactions
-  - Attach archetype + scores to signal metadata
-- [ ] Add filtering: Optionally ignore MEV_BOT transactions from alerts
-- [ ] Update signal response DTOs with smart money context
+  - Attach archetype + scores to signal metadata (JSON)
+  - Check convergence window (12h) via `SignalRepository.findArchetypesByTokenAndCreatedAtAfter`
+- [x] Add MEV filtering: Hard-exclude `MEV_BOT` at detection layer; `?includeMev=true` API toggle
+- [x] Create `SignalController` (`GET /api/v1/signals`) with `SignalApi` OpenAPI spec
+- [x] Create `SignalResponse` DTO with nullable smart money context (`walletArchetype`, `walletTier`, `pnlScore`)
+- [x] Add `V17` migration: `idx_signals_token_created(token_address, created_at DESC)`
+- [x] Wire `SmartMoneySignalEnricher` into `WhaleDetectorService` via `DomainServiceConfig`
 
 #### Day 28 (3 hrs) - Week 4 Integration & Verification
 - [ ] Full pipeline integration test:
