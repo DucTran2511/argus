@@ -1,12 +1,17 @@
 package com.argus.core.exception;
 
 import com.argus.api.dto.ErrorResponse;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -56,6 +61,74 @@ public class GlobalExceptionHandler {
                                 HttpStatus.BAD_REQUEST.value(),
                                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                                 ex.getMessage(),
+                                request.getDescription(false).replace("uri=", ""),
+                                "VALIDATION_ERROR");
+
+                return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(
+                        MethodArgumentNotValidException ex,
+                        WebRequest request) {
+
+                String message = ex.getBindingResult().getFieldErrors().stream()
+                                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                                .collect(Collectors.joining(", "));
+
+                log.warn("Validation failed: {}", message);
+
+                ErrorResponse error = ErrorResponse.of(
+                                HttpStatus.BAD_REQUEST.value(),
+                                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                                message,
+                                request.getDescription(false).replace("uri=", ""),
+                                "VALIDATION_ERROR");
+
+                return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(ConstraintViolationException.class)
+        public ResponseEntity<ErrorResponse> handleConstraintViolation(
+                        ConstraintViolationException ex,
+                        WebRequest request) {
+
+                String message = ex.getConstraintViolations().stream()
+                                .map(cv -> {
+                                        String path = cv.getPropertyPath().toString();
+                                        // Strip method name prefix (e.g. "createWallet.address" -> "address")
+                                        int dot = path.lastIndexOf('.');
+                                        return (dot >= 0 ? path.substring(dot + 1) : path) + ": " + cv.getMessage();
+                                })
+                                .collect(Collectors.joining(", "));
+
+                log.warn("Constraint violation: {}", message);
+
+                ErrorResponse error = ErrorResponse.of(
+                                HttpStatus.BAD_REQUEST.value(),
+                                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                                message,
+                                request.getDescription(false).replace("uri=", ""),
+                                "VALIDATION_ERROR");
+
+                return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(BindException.class)
+        public ResponseEntity<ErrorResponse> handleBindException(
+                        BindException ex,
+                        WebRequest request) {
+
+                String message = ex.getBindingResult().getFieldErrors().stream()
+                                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                                .collect(Collectors.joining(", "));
+
+                log.warn("Bind error: {}", message);
+
+                ErrorResponse error = ErrorResponse.of(
+                                HttpStatus.BAD_REQUEST.value(),
+                                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                                message,
                                 request.getDescription(false).replace("uri=", ""),
                                 "VALIDATION_ERROR");
 

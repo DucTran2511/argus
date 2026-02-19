@@ -1,13 +1,17 @@
 package com.argus.api;
 
 import com.argus.api.dto.WalletRequest;
+import com.argus.core.exception.GlobalExceptionHandler;
 import com.argus.domain.model.Wallet;
+import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.WalletService;
+import com.argus.domain.service.WalletStatsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(WalletController.class)
+@Import(GlobalExceptionHandler.class)
 class WalletControllerTest {
 
         @Autowired
@@ -33,6 +38,12 @@ class WalletControllerTest {
 
         @MockBean
         private WalletService walletService;
+
+        @MockBean
+        private TransactionService transactionService;
+
+        @MockBean
+        private WalletStatsService walletStatsService;
 
         @Test
         void createWallet_shouldReturn201() throws Exception {
