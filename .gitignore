@@ -22,3 +22,5 @@ build/
 backups/
 *.sql
 *.sql.gz
+# But DO track Flyway migrations
+!src/main/resources/db/migration/*.sql
