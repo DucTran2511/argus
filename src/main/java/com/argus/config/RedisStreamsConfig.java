@@ -18,10 +18,14 @@ import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.stream.Subscription;
+import org.springframework.data.redis.stream.StreamMessageListenerContainer.StreamMessageListenerContainerOptions;
+import org.springframework.util.ErrorHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.util.UUID;
 
+@Slf4j
 @Configuration
 @EnableRedisRepositories
 public class RedisStreamsConfig {
@@ -39,8 +43,9 @@ public class RedisStreamsConfig {
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamListenerContainer(
             RedisConnectionFactory factory) {
 
-        var options = StreamMessageListenerContainer.StreamMessageListenerContainerOptions.builder()
+        var options = StreamMessageListenerContainerOptions.builder()
                 .pollTimeout(Duration.ofSeconds(1))
+                .errorHandler(t -> log.error("Redis Stream Error: {}", t.getMessage()))
                 .build();
 
         return StreamMessageListenerContainer.create(factory, options);
