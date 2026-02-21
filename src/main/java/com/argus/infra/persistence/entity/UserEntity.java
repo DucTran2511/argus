@@ -1,8 +1,6 @@
 package com.argus.infra.persistence.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -15,59 +13,35 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "wallets")
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class WalletEntity {
+public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(name = "user_id")
-    private UUID userId;
+    @Column(unique = true)
+    private String email;
 
-    @Column(nullable = false, length = 66)
-    private String address;
+    @Column(name = "supabase_uid", unique = true, length = 36)
+    private String supabaseUid;
 
-    @Column(nullable = false, length = 20)
-    private String chain;
-
-    @Column(length = 100)
-    private String label;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
-    private WalletType type;
-
-    @Column(name = "total_pnl", precision = 20, scale = 8)
-    private BigDecimal totalPnl;
-
-    @Column(name = "win_rate", precision = 5, scale = 4)
-    private BigDecimal winRate;
-
-    @Column(name = "first_seen_at")
-    private LocalDateTime firstSeenAt;
-
-    @Column(name = "last_activity_at")
-    private LocalDateTime lastActivityAt;
+    @Column(name = "telegram_chat_id", length = 50)
+    private String telegramChatId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    public enum WalletType {
-        WHALE, VC, DEX_TRADER, INFLUENCER, SMART_MONEY, UNKNOWN
-    }
 
     @PrePersist
     protected void onCreate() {

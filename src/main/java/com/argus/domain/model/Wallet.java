@@ -16,6 +16,7 @@ import java.util.UUID;
 public class Wallet {
 
     private UUID id;
+    private UUID userId;
     private String address;
     private String chain;
     private String label;

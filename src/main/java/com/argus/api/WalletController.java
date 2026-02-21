@@ -7,12 +7,15 @@ import com.argus.api.dto.response.WalletTimelineResponse;
 import com.argus.api.dto.response.SyncResponse;
 import com.argus.api.dto.response.WalletStatsResponse;
 import com.argus.api.spec.WalletApi;
+import com.argus.core.security.AuthContext;
+import com.argus.core.security.AuthenticatedUser;
 import com.argus.domain.model.AssetTransfer;
 import com.argus.domain.model.Wallet;
 import com.argus.domain.model.WalletStatsSummary;
 import com.argus.domain.service.WalletService;
 import com.argus.domain.service.WalletStatsService;
 import com.argus.domain.service.TransactionService;
+import com.argus.domain.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -44,13 +47,19 @@ public class WalletController implements WalletApi {
         private final WalletService walletService;
         private final TransactionService transactionService;
         private final WalletStatsService statsService;
+        private final UserService userService;
+
+        private UUID getCurrentUserId() {
+                AuthenticatedUser user = AuthContext.currentUser();
+                return userService.getOrCreateUser(user.supabaseUid(), user.email()).getId();
+        }
 
         @Override
         @PostMapping
         public ResponseEntity<WalletResponse> createWallet(
                         @Valid @RequestBody WalletRequest request) {
                 log.info("POST /api/v1/wallets - Creating wallet with address: {}", request.getAddress());
-                Wallet wallet = walletService.createWallet(request.toDomain());
+                Wallet wallet = walletService.createWallet(request.toDomain(), getCurrentUserId());
                 return ResponseEntity.status(HttpStatus.CREATED).body(WalletResponse.fromDomain(wallet));
         }
 
@@ -59,7 +68,7 @@ public class WalletController implements WalletApi {
         public ResponseEntity<WalletResponse> getWalletById(
                         @PathVariable UUID id) {
                 log.info("GET /api/v1/wallets/{} - Fetching wallet by id", id);
-                Wallet wallet = walletService.getWalletById(id);
+                Wallet wallet = walletService.getWalletById(id, getCurrentUserId());
                 return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
         }
 
@@ -68,7 +77,7 @@ public class WalletController implements WalletApi {
         public ResponseEntity<WalletResponse> getWalletByAddress(
                         @PathVariable String address) {
                 log.info("GET /api/v1/wallets/address/{} - Fetching wallet by address", address);
-                Wallet wallet = walletService.getWalletByAddress(address);
+                Wallet wallet = walletService.getWalletByAddress(address, getCurrentUserId());
                 return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
         }
 
@@ -78,9 +87,10 @@ public class WalletController implements WalletApi {
                         @RequestParam(required = false) Wallet.WalletType type) {
                 log.info("GET /api/v1/wallets - Fetching all wallets (type filter: {})", type);
 
+                UUID userId = getCurrentUserId();
                 List<Wallet> wallets = (type == null)
-                                ? walletService.getAllWallets()
-                                : walletService.getWalletsByType(type);
+                                ? walletService.getAllWallets(userId)
+                                : walletService.getWalletsByType(type, userId);
 
                 List<WalletResponse> response = wallets.stream()
                                 .map(WalletResponse::fromDomain)
@@ -96,7 +106,7 @@ public class WalletController implements WalletApi {
                         @Valid @RequestBody WalletRequest request) {
                 log.info("PUT /api/v1/wallets/{} - Updating wallet", id);
                 Wallet updatedWallet = request.toDomain();
-                Wallet wallet = walletService.updateWallet(id, updatedWallet);
+                Wallet wallet = walletService.updateWallet(id, updatedWallet, getCurrentUserId());
                 return ResponseEntity.ok(WalletResponse.fromDomain(wallet));
         }
 
@@ -105,7 +115,7 @@ public class WalletController implements WalletApi {
         public ResponseEntity<Void> deleteWallet(
                         @PathVariable UUID id) {
                 log.info("DELETE /api/v1/wallets/{} - Deleting wallet", id);
-                walletService.deleteWallet(id);
+                walletService.deleteWallet(id, getCurrentUserId());
                 return ResponseEntity.noContent().build();
         }
 
@@ -114,7 +124,14 @@ public class WalletController implements WalletApi {
         public ResponseEntity<Boolean> walletExists(
                         @PathVariable String address) {
                 log.info("GET /api/v1/wallets/exists/{} - Checking if wallet exists", address);
-                boolean exists = walletService.walletExists(address);
+                // exists check can stay global or scoped? usually global is fine for existence
+                // check,
+                // but here we might want to know if it exists FOR THE USER.
+                // Let's check for the user.
+                boolean exists = walletService.walletExists(address); // Original check was global
+                // If we want scoped:
+                // boolean exists = walletService.walletExistsForUser(address,
+                // getCurrentUserId());
                 return ResponseEntity.ok(exists);
         }
 
@@ -124,6 +141,9 @@ public class WalletController implements WalletApi {
                         @PathVariable @Pattern(regexp = "^0x[a-fA-F0-9]{40}$") String address,
                         @RequestParam(defaultValue = "50") @Min(1) @Max(500) int limit,
                         @RequestParam(defaultValue = "desc") @Pattern(regexp = "^(asc|desc)$") String order) {
+
+                // Verify ownership
+                walletService.getWalletByAddress(address, getCurrentUserId());
 
                 List<AssetTransfer> transfers = transactionService.getWalletHistory(address, limit, order);
                 long totalCount = transactionService.countTransactions(address);
@@ -147,6 +167,9 @@ public class WalletController implements WalletApi {
                         @RequestParam(defaultValue = "500") int maxCount) {
                 log.info("POST /api/v1/wallets/{}/sync-history - maxCount: {}", address, maxCount);
 
+                // Verify ownership
+                walletService.getWalletByAddress(address, getCurrentUserId());
+
                 List<AssetTransfer> synced = transactionService.syncWalletHistory(address, maxCount);
 
                 SyncResponse response = SyncResponse.builder()
@@ -160,14 +183,14 @@ public class WalletController implements WalletApi {
 
         @PostMapping("/{id}/calculate-stats")
         public ResponseEntity<WalletStatsResponse> calculateStats(@PathVariable UUID id) {
-                Wallet wallet = walletService.getWalletById(id);
+                Wallet wallet = walletService.getWalletById(id, getCurrentUserId());
                 WalletStatsSummary summary = statsService.calculateStats(wallet.getAddress());
                 return ResponseEntity.ok(WalletStatsResponse.toResponse(summary));
         }
 
         @GetMapping("/{id}/stats")
         public ResponseEntity<WalletStatsResponse> getStats(@PathVariable UUID id) {
-                Wallet wallet = walletService.getWalletById(id);
+                Wallet wallet = walletService.getWalletById(id, getCurrentUserId());
                 WalletStatsSummary summary = statsService.getStats(wallet.getAddress());
                 return ResponseEntity.ok(WalletStatsResponse.toResponse(summary));
         }

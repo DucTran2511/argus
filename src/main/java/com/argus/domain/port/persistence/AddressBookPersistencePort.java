@@ -4,27 +4,26 @@ import com.argus.domain.model.AddressLabel;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public interface AddressBookPersistencePort {
     AddressLabel save(AddressLabel label);
 
     List<AddressLabel> saveAll(List<AddressLabel> labels);
 
-    List<AddressLabel> findByAddress(String address);
+    List<AddressLabel> findByAddressAndUserId(String address, UUID userId);
 
-    List<AddressLabel> findByAddresses(Set<String> addresses);
+    List<AddressLabel> findByAddressesAndUserId(Set<String> addresses, UUID userId);
 
-    List<AddressLabel> findByLabel(String label);
+    List<AddressLabel> findByLabelAndUserId(String label, UUID userId);
 
-    List<AddressLabel> findByLabelContaining(String labelPart);
+    List<AddressLabel> findByLabelContainingAndUserId(String labelPart, UUID userId);
 
-    List<AddressLabel> findByCategory(String category);
+    List<AddressLabel> findByCategoryAndUserId(String category, UUID userId);
 
-    boolean existsByAddressAndLabel(String address, String label);
+    boolean existsByAddressAndLabelAndUserId(String address, String label, UUID userId);
 
-    long countByAddress(String address);
+    long countByAddressAndUserId(String address, UUID userId);
 
-    void deleteByAddressAndLabel(String address, String label);
-
-    void deleteAllByAddress(String address);
+    void deleteByAddressAndLabelAndUserId(String address, String label, UUID userId);
 }

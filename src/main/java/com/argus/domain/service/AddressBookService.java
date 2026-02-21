@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,17 +26,18 @@ public class AddressBookService {
     private final AddressBookPersistencePort addressBookPersistencePort;
     private final Clock clock;
 
-    public AddressLabel addLabel(String address, String label, String category) {
+    public AddressLabel addLabel(String address, String label, String category, UUID userId) {
         String normalizedAddress = normalizeAddress(address);
         validateLabel(label);
         validateCategory(category);
 
-        long currentCount = addressBookPersistencePort.countByAddress(normalizedAddress);
+        long currentCount = addressBookPersistencePort.countByAddressAndUserId(normalizedAddress, userId);
         if (currentCount >= AddressLabel.MAX_LABELS_PER_ADDRESS) {
             throw new MaxLabelsExceededException(normalizedAddress, AddressLabel.MAX_LABELS_PER_ADDRESS);
         }
 
         AddressLabel newLabel = AddressLabel.builder()
+                .userId(userId)
                 .address(normalizedAddress)
                 .label(label.trim())
                 .category(category != null ? category.trim() : null)
@@ -44,51 +46,53 @@ public class AddressBookService {
                 .build();
 
         try {
-            log.info("Adding label '{}' to address {}", label, normalizedAddress);
+            log.info("Adding label '{}' to address {} for user {}", label, normalizedAddress, userId);
             return addressBookPersistencePort.save(newLabel);
         } catch (DataIntegrityViolationException e) {
             throw new LabelAlreadyExistsException(normalizedAddress, label);
         }
     }
 
-    public List<AddressLabel> getLabels(String address) {
-        List<AddressLabel> labels = addressBookPersistencePort.findByAddress(normalizeAddress(address));
+    public List<AddressLabel> getLabels(String address, UUID userId) {
+        List<AddressLabel> labels = addressBookPersistencePort.findByAddressAndUserId(normalizeAddress(address),
+                userId);
         if (labels.isEmpty()) {
             throw new LabelNotFoundException(address);
         }
         return labels;
     }
 
-    public void removeLabel(String address, String label) {
+    public void removeLabel(String address, String label, UUID userId) {
         String normalizedAddress = normalizeAddress(address);
-        if (!addressBookPersistencePort.existsByAddressAndLabel(normalizedAddress, label)) {
+        if (!addressBookPersistencePort.existsByAddressAndLabelAndUserId(normalizedAddress, label, userId)) {
             throw new LabelNotFoundException(normalizedAddress);
         }
-        log.info("Removing label '{}' from address {}", label, normalizedAddress);
-        addressBookPersistencePort.deleteByAddressAndLabel(normalizedAddress, label);
+        log.info("Removing label '{}' from address {} for user {}", label, normalizedAddress, userId);
+        addressBookPersistencePort.deleteByAddressAndLabelAndUserId(normalizedAddress, label, userId);
     }
 
-    public List<AddressLabel> search(String label, String q, String category) {
+    public List<AddressLabel> search(String label, String q, String category, UUID userId) {
         if (label != null) {
-            return addressBookPersistencePort.findByLabel(label.trim());
+            return addressBookPersistencePort.findByLabelAndUserId(label.trim(), userId);
         } else if (q != null) {
-            return addressBookPersistencePort.findByLabelContaining(q.trim());
+            return addressBookPersistencePort.findByLabelContainingAndUserId(q.trim(), userId);
         } else if (category != null) {
-            return addressBookPersistencePort.findByCategory(category.trim());
+            return addressBookPersistencePort.findByCategoryAndUserId(category.trim(), userId);
         }
         throw new IllegalArgumentException("Must provide label, q, or category parameter");
     }
 
-    public List<AddressLabel> importLabels(List<AddressLabel> imports) {
+    public List<AddressLabel> importLabels(List<AddressLabel> imports, UUID userId) {
         if (imports == null || imports.isEmpty()) {
             return List.of();
         }
 
-        log.info("Importing {} labels", imports.size());
+        log.info("Importing {} labels for user {}", imports.size(), userId);
 
         List<AddressLabel> normalized = imports.stream()
                 .filter(l -> isValidLabelForImport(l.getLabel()))
                 .map(l -> AddressLabel.builder()
+                        .userId(userId)
                         .address(normalizeAddress(l.getAddress()))
                         .label(l.getLabel().trim())
                         .category(l.getCategory() != null ? l.getCategory().trim() : null)
@@ -101,7 +105,7 @@ public class AddressBookService {
                 .map(AddressLabel::getAddress)
                 .collect(Collectors.toSet());
 
-        List<AddressLabel> existing = addressBookPersistencePort.findByAddresses(addresses);
+        List<AddressLabel> existing = addressBookPersistencePort.findByAddressesAndUserId(addresses, userId);
 
         Set<String> existingPairs = existing.stream()
                 .map(l -> l.getAddress() + "|" + l.getLabel().toLowerCase())

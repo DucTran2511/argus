@@ -16,9 +16,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
-@Table(name = "address_labels", uniqueConstraints = @UniqueConstraint(columnNames = { "address", "label" }))
+@Table(name = "address_labels", uniqueConstraints = @UniqueConstraint(columnNames = { "user_id", "address", "label" }))
 @Data
 @Builder
 @NoArgsConstructor
@@ -28,6 +29,9 @@ public class AddressLabelEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "user_id")
+    private UUID userId;
 
     @Column(nullable = false, length = 42)
     private String address;
@@ -58,6 +62,7 @@ public class AddressLabelEntity {
     public AddressLabel toDomain() {
         return AddressLabel.builder()
                 .id(id)
+                .userId(userId)
                 .address(address)
                 .label(label)
                 .category(category)
@@ -69,6 +74,7 @@ public class AddressLabelEntity {
     public static AddressLabelEntity fromDomain(AddressLabel domain) {
         return AddressLabelEntity.builder()
                 .id(domain.getId())
+                .userId(domain.getUserId())
                 .address(domain.getAddress() != null ? domain.getAddress().toLowerCase() : null)
                 .label(domain.getLabel())
                 .category(domain.getCategory())

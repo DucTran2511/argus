@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -38,68 +39,62 @@ public class AddressBookPersistenceAdapter implements AddressBookPersistencePort
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressLabel> findByAddress(String address) {
-        return repository.findByAddressIgnoreCase(address).stream()
+    public List<AddressLabel> findByAddressAndUserId(String address, UUID userId) {
+        return repository.findByAddressIgnoreCaseAndUserId(address, userId).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressLabel> findByAddresses(Set<String> addresses) {
+    public List<AddressLabel> findByAddressesAndUserId(Set<String> addresses, UUID userId) {
         if (addresses == null || addresses.isEmpty()) {
             return List.of();
         }
-        return repository.findByAddressIgnoreCaseIn(addresses).stream()
+        return repository.findByAddressIgnoreCaseInAndUserId(addresses, userId).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressLabel> findByLabel(String label) {
-        return repository.findByLabelIgnoreCase(label).stream()
+    public List<AddressLabel> findByLabelAndUserId(String label, UUID userId) {
+        return repository.findByLabelIgnoreCaseAndUserId(label, userId).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressLabel> findByLabelContaining(String labelPart) {
-        return repository.findByLabelContainingIgnoreCase(labelPart).stream()
+    public List<AddressLabel> findByLabelContainingAndUserId(String labelPart, UUID userId) {
+        return repository.findByLabelContainingIgnoreCaseAndUserId(labelPart, userId).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressLabel> findByCategory(String category) {
-        return repository.findByCategory(category).stream()
+    public List<AddressLabel> findByCategoryAndUserId(String category, UUID userId) {
+        return repository.findByCategoryAndUserId(category, userId).stream()
                 .map(AddressLabelEntity::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsByAddressAndLabel(String address, String label) {
-        return repository.existsByAddressIgnoreCaseAndLabelIgnoreCase(address, label);
+    public boolean existsByAddressAndLabelAndUserId(String address, String label, UUID userId) {
+        return repository.existsByAddressIgnoreCaseAndLabelIgnoreCaseAndUserId(address, label, userId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public long countByAddress(String address) {
-        return repository.countByAddressIgnoreCase(address);
+    public long countByAddressAndUserId(String address, UUID userId) {
+        return repository.countByAddressIgnoreCaseAndUserId(address, userId);
     }
 
     @Override
     @Transactional
-    public void deleteByAddressAndLabel(String address, String label) {
-        repository.deleteByAddressAndLabel(address, label);
-    }
-
-    @Override
-    @Transactional
-    public void deleteAllByAddress(String address) {
-        repository.deleteAllByAddressIgnoreCase(address);
+    public void deleteByAddressAndLabelAndUserId(String address, String label, UUID userId) {
+        repository.deleteByAddressAndLabelAndUserId(address, label, userId);
     }
 }

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Builder.Default;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 public class AddressLabel {
 
     private Long id;
+    private UUID userId;
     private String address;
     private String label;
     private String category;

@@ -7,29 +7,32 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface AddressLabelRepository extends JpaRepository<AddressLabelEntity, Long> {
 
-    List<AddressLabelEntity> findByAddressIgnoreCase(String address);
+    List<AddressLabelEntity> findByAddressIgnoreCaseAndUserId(String address, UUID userId);
 
-    List<AddressLabelEntity> findByLabelIgnoreCase(String label);
+    List<AddressLabelEntity> findByLabelIgnoreCaseAndUserId(String label, UUID userId);
 
-    List<AddressLabelEntity> findByLabelContainingIgnoreCase(String labelPart);
+    List<AddressLabelEntity> findByLabelContainingIgnoreCaseAndUserId(String labelPart, UUID userId);
 
-    List<AddressLabelEntity> findByCategory(String category);
+    List<AddressLabelEntity> findByCategoryAndUserId(String category, UUID userId);
 
-    boolean existsByAddressIgnoreCaseAndLabelIgnoreCase(String address, String label);
+    boolean existsByAddressIgnoreCaseAndLabelIgnoreCaseAndUserId(String address, String label, UUID userId);
 
-    long countByAddressIgnoreCase(String address);
+    long countByAddressIgnoreCaseAndUserId(String address, UUID userId);
 
-    List<AddressLabelEntity> findByAddressIgnoreCaseIn(java.util.Collection<String> addresses);
-
-    @Modifying
-    @Query("DELETE FROM AddressLabelEntity e WHERE lower(e.address) = lower(:address) AND lower(e.label) = lower(:label)")
-    void deleteByAddressAndLabel(@Param("address") String address, @Param("label") String label);
+    List<AddressLabelEntity> findByAddressIgnoreCaseInAndUserId(Collection<String> addresses, UUID userId);
 
     @Modifying
-    void deleteAllByAddressIgnoreCase(String address);
+    @Query("DELETE FROM AddressLabelEntity e WHERE lower(e.address) = lower(:address) AND lower(e.label) = lower(:label) AND e.userId = :userId")
+    void deleteByAddressAndLabelAndUserId(@Param("address") String address, @Param("label") String label,
+            @Param("userId") UUID userId);
+
+    @Modifying
+    void deleteAllByAddressIgnoreCaseAndUserId(String address, UUID userId);
 }

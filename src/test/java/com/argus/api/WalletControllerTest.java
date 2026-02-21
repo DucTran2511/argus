@@ -2,12 +2,19 @@ package com.argus.api;
 
 import com.argus.api.dto.WalletRequest;
 import com.argus.core.exception.GlobalExceptionHandler;
+import com.argus.core.security.AuthContext;
+import com.argus.core.security.AuthenticatedUser;
+import com.argus.domain.model.User;
 import com.argus.domain.model.Wallet;
 import com.argus.domain.service.TransactionService;
 import com.argus.domain.service.WalletService;
 import com.argus.domain.service.WalletStatsService;
+import com.argus.domain.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +30,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -47,6 +57,29 @@ class WalletControllerTest {
         @MockBean
         private WalletStatsService walletStatsService;
 
+        @MockBean
+        private UserService userService;
+
+        private MockedStatic<AuthContext> mockedAuthContext;
+        private final UUID TEST_USER_ID = UUID.randomUUID();
+        private final String TEST_SUB = "test-sub";
+        private final String TEST_EMAIL = "test@example.com";
+
+        @BeforeEach
+        void setUp() {
+                mockedAuthContext = mockStatic(AuthContext.class);
+                AuthenticatedUser authUser = new AuthenticatedUser(TEST_SUB, TEST_EMAIL, "USER");
+                mockedAuthContext.when(AuthContext::currentUser).thenReturn(authUser);
+
+                User user = User.builder().id(TEST_USER_ID).email(TEST_EMAIL).supabaseUid(TEST_SUB).build();
+                when(userService.getOrCreateUser(eq(TEST_SUB), eq(TEST_EMAIL))).thenReturn(user);
+        }
+
+        @AfterEach
+        void tearDown() {
+                mockedAuthContext.close();
+        }
+
         @Test
         void createWallet_shouldReturn201() throws Exception {
                 // Given
@@ -61,6 +94,7 @@ class WalletControllerTest {
 
                 Wallet createdWallet = Wallet.builder()
                                 .id(UUID.randomUUID())
+                                .userId(TEST_USER_ID)
                                 .address(request.getAddress())
                                 .chain(request.getChain())
                                 .label(request.getLabel())
@@ -73,7 +107,7 @@ class WalletControllerTest {
                                 .updatedAt(LocalDateTime.now())
                                 .build();
 
-                when(walletService.createWallet(any(Wallet.class))).thenReturn(createdWallet);
+                when(walletService.createWallet(any(Wallet.class), eq(TEST_USER_ID))).thenReturn(createdWallet);
 
                 // When & Then
                 mockMvc.perform(post("/api/v1/wallets")
@@ -107,13 +141,14 @@ class WalletControllerTest {
                 UUID walletId = UUID.randomUUID();
                 Wallet wallet = Wallet.builder()
                                 .id(walletId)
+                                .userId(TEST_USER_ID)
                                 .address("0x1234567890123456789012345678901234567890")
                                 .chain("ethereum")
                                 .label("Test Wallet")
                                 .type(Wallet.WalletType.WHALE)
                                 .build();
 
-                when(walletService.getWalletById(walletId)).thenReturn(wallet);
+                when(walletService.getWalletById(eq(walletId), eq(TEST_USER_ID))).thenReturn(wallet);
 
                 // When & Then
                 mockMvc.perform(get("/api/v1/wallets/{id}", walletId))
@@ -128,18 +163,20 @@ class WalletControllerTest {
                 List<Wallet> wallets = Arrays.asList(
                                 Wallet.builder()
                                                 .id(UUID.randomUUID())
+                                                .userId(TEST_USER_ID)
                                                 .address("0x1111111111111111111111111111111111111111")
                                                 .chain("ethereum")
                                                 .type(Wallet.WalletType.WHALE)
                                                 .build(),
                                 Wallet.builder()
                                                 .id(UUID.randomUUID())
+                                                .userId(TEST_USER_ID)
                                                 .address("0x2222222222222222222222222222222222222222")
                                                 .chain("ethereum")
                                                 .type(Wallet.WalletType.VC)
                                                 .build());
 
-                when(walletService.getAllWallets()).thenReturn(wallets);
+                when(walletService.getAllWallets(eq(TEST_USER_ID))).thenReturn(wallets);
 
                 // When & Then
                 mockMvc.perform(get("/api/v1/wallets"))

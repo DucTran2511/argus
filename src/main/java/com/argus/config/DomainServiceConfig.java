@@ -22,6 +22,8 @@ import com.argus.domain.service.WalletService;
 import com.argus.domain.service.WalletStatsAggregator;
 import com.argus.domain.service.WalletStatsService;
 import com.argus.domain.service.SmartMoneyScoringService;
+import com.argus.domain.service.UserService;
+import com.argus.domain.port.persistence.UserPersistencePort;
 
 import com.argus.infra.stream.StreamPublisher;
 
@@ -115,5 +117,10 @@ public class DomainServiceConfig {
     public WalletStatsAggregator walletStatsAggregator(
             WalletStatsPersistencePort walletStatsPort) {
         return new WalletStatsAggregator(walletStatsPort);
+    }
+
+    @Bean
+    public UserService userService(UserPersistencePort userPersistencePort) {
+        return new UserService(userPersistencePort);
     }
 }

@@ -44,6 +44,25 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
     }
 
     @Override
+    public List<Wallet> findByUserId(UUID userId) {
+        return repository.findByUserId(userId).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<Wallet> findByIdAndUserId(UUID id, UUID userId) {
+        return repository.findByIdAndUserId(id, userId)
+                .map(this::toDomain);
+    }
+
+    @Override
+    public Optional<Wallet> findByAddressAndUserId(String address, UUID userId) {
+        return repository.findByAddressAndUserId(address, userId)
+                .map(this::toDomain);
+    }
+
+    @Override
     public List<Wallet> findAll() {
         return repository.findAll().stream()
                 .map(this::toDomain)
@@ -124,6 +143,7 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
 
         return Wallet.builder()
                 .id(entity.getId())
+                .userId(entity.getUserId())
                 .address(entity.getAddress())
                 .chain(entity.getChain())
                 .label(entity.getLabel())
@@ -144,6 +164,7 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
 
         WalletEntity entity = new WalletEntity();
         entity.setId(domain.getId());
+        entity.setUserId(domain.getUserId());
         entity.setAddress(domain.getAddress());
         entity.setChain(domain.getChain());
         entity.setLabel(domain.getLabel());

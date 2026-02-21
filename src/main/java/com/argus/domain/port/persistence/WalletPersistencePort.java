@@ -15,6 +15,12 @@ public interface WalletPersistencePort {
 
     Optional<Wallet> findByAddress(String address);
 
+    List<Wallet> findByUserId(UUID userId);
+
+    Optional<Wallet> findByIdAndUserId(UUID id, UUID userId);
+
+    Optional<Wallet> findByAddressAndUserId(String address, UUID userId);
+
     List<Wallet> findAll();
 
     List<Wallet> findByChain(String chain);
