@@ -21,5 +21,10 @@ public class WalletStatsSummary {
     private Integer totalTrades;
     private Integer profitableTrades;
     private BigDecimal avgRoiPercent;
+    private BigDecimal grossProfit;
+    private BigDecimal grossLoss;
+    private BigDecimal maxRoiPercent;
+    private BigDecimal totalBuyVolume;
+    private BigDecimal totalSellVolume;
     private List<WalletStats> tokenStats;
 }

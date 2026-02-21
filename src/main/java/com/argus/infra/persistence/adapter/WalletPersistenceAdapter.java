@@ -51,6 +51,14 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
     }
 
     @Override
+    public List<Wallet> findByUserIdAndType(UUID userId, Wallet.WalletType type) {
+        WalletEntity.WalletType entityType = mapToEntityType(type);
+        return repository.findByUserIdAndType(userId, entityType).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Wallet> findByIdAndUserId(UUID id, UUID userId) {
         return repository.findByIdAndUserId(id, userId)
                 .map(this::toDomain);
@@ -110,16 +118,19 @@ public class WalletPersistenceAdapter implements WalletPersistencePort {
     }
 
     @Override
+    @Transactional
     public void delete(UUID id) {
         repository.deleteById(id);
     }
 
     @Override
+    @Transactional
     public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 
     @Override
+    @Transactional
     public void deleteByAddress(String address) {
         repository.findByAddress(address)
                 .ifPresent(repository::delete);

@@ -21,6 +21,8 @@ public interface WalletRepository extends JpaRepository<WalletEntity, UUID> {
 
     Optional<WalletEntity> findByAddressAndUserId(String address, UUID userId);
 
+    List<WalletEntity> findByUserIdAndType(UUID userId, WalletEntity.WalletType type);
+
     List<WalletEntity> findByChain(String chain);
 
     List<WalletEntity> findByType(WalletEntity.WalletType type);

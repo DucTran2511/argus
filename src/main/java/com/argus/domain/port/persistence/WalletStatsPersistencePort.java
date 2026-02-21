@@ -17,4 +17,6 @@ public interface WalletStatsPersistencePort {
     long countByWallet(String walletAddress);
 
     long countProfitableByWallet(String walletAddress);
+
+    List<String> findActiveWalletAddresses(int page, int size);
 }

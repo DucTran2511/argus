@@ -17,6 +17,8 @@ public interface WalletPersistencePort {
 
     List<Wallet> findByUserId(UUID userId);
 
+    List<Wallet> findByUserIdAndType(UUID userId, Wallet.WalletType type);
+
     Optional<Wallet> findByIdAndUserId(UUID id, UUID userId);
 
     Optional<Wallet> findByAddressAndUserId(String address, UUID userId);

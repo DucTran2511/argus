@@ -7,15 +7,12 @@ import com.argus.api.dto.response.WalletTimelineResponse;
 import com.argus.api.dto.response.SyncResponse;
 import com.argus.api.dto.response.WalletStatsResponse;
 import com.argus.api.spec.WalletApi;
-import com.argus.core.security.AuthContext;
-import com.argus.core.security.AuthenticatedUser;
 import com.argus.domain.model.AssetTransfer;
 import com.argus.domain.model.Wallet;
 import com.argus.domain.model.WalletStatsSummary;
 import com.argus.domain.service.WalletService;
 import com.argus.domain.service.WalletStatsService;
 import com.argus.domain.service.TransactionService;
-import com.argus.domain.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -47,11 +44,10 @@ public class WalletController implements WalletApi {
         private final WalletService walletService;
         private final TransactionService transactionService;
         private final WalletStatsService statsService;
-        private final UserService userService;
+        private final com.argus.core.security.UserContext userContext;
 
         private UUID getCurrentUserId() {
-                AuthenticatedUser user = AuthContext.currentUser();
-                return userService.getOrCreateUser(user.supabaseUid(), user.email()).getId();
+                return userContext.getUserId();
         }
 
         @Override
@@ -123,15 +119,8 @@ public class WalletController implements WalletApi {
         @GetMapping("/exists/{address}")
         public ResponseEntity<Boolean> walletExists(
                         @PathVariable String address) {
-                log.info("GET /api/v1/wallets/exists/{} - Checking if wallet exists", address);
-                // exists check can stay global or scoped? usually global is fine for existence
-                // check,
-                // but here we might want to know if it exists FOR THE USER.
-                // Let's check for the user.
-                boolean exists = walletService.walletExists(address); // Original check was global
-                // If we want scoped:
-                // boolean exists = walletService.walletExistsForUser(address,
-                // getCurrentUserId());
+                log.info("GET /api/v1/wallets/exists/{} - Checking if wallet exists for user", address);
+                boolean exists = walletService.walletExistsForUser(address, getCurrentUserId());
                 return ResponseEntity.ok(exists);
         }
 

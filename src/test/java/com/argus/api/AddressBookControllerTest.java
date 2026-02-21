@@ -5,9 +5,7 @@ import com.argus.core.exception.GlobalExceptionHandler;
 import com.argus.core.security.AuthContext;
 import com.argus.core.security.AuthenticatedUser;
 import com.argus.domain.model.AddressLabel;
-import com.argus.domain.model.User;
 import com.argus.domain.service.AddressBookService;
-import com.argus.domain.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +44,7 @@ class AddressBookControllerTest {
     private AddressBookService addressBookService;
 
     @MockBean
-    private UserService userService;
+    private com.argus.core.security.UserContext userContext;
 
     private MockedStatic<AuthContext> mockedAuthContext;
     private final UUID TEST_USER_ID = UUID.randomUUID();
@@ -59,8 +57,7 @@ class AddressBookControllerTest {
         AuthenticatedUser authUser = new AuthenticatedUser(TEST_SUB, TEST_EMAIL, "USER");
         mockedAuthContext.when(AuthContext::currentUser).thenReturn(authUser);
 
-        User user = User.builder().id(TEST_USER_ID).email(TEST_EMAIL).supabaseUid(TEST_SUB).build();
-        when(userService.getOrCreateUser(eq(TEST_SUB), eq(TEST_EMAIL))).thenReturn(user);
+        when(userContext.getUserId()).thenReturn(TEST_USER_ID);
     }
 
     @AfterEach

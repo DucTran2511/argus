@@ -2,7 +2,7 @@
 ALTER TABLE address_labels ADD COLUMN user_id UUID REFERENCES users(id);
 
 -- Drop old unique constraint (address, label)
-ALTER TABLE address_labels DROP CONSTRAINT address_labels_address_label_key;
+ALTER TABLE address_labels DROP CONSTRAINT IF EXISTS address_labels_address_label_key;
 
 -- Add new unique constraint (user_id, address, label)
 ALTER TABLE address_labels ADD CONSTRAINT address_labels_user_address_label_key UNIQUE(user_id, address, label);

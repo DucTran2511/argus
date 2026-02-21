@@ -3,11 +3,8 @@ package com.argus.api;
 import com.argus.api.dto.LabelRequest;
 import com.argus.api.dto.response.LabelResponse;
 import com.argus.api.spec.AddressBookApi;
-import com.argus.core.security.AuthContext;
-import com.argus.core.security.AuthenticatedUser;
 import com.argus.domain.model.AddressLabel;
 import com.argus.domain.service.AddressBookService;
-import com.argus.domain.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,11 +23,10 @@ import java.util.UUID;
 public class AddressBookController implements AddressBookApi {
 
     private final AddressBookService addressBookService;
-    private final UserService userService;
+    private final com.argus.core.security.UserContext userContext;
 
     private UUID getCurrentUserId() {
-        AuthenticatedUser user = AuthContext.currentUser();
-        return userService.getOrCreateUser(user.supabaseUid(), user.email()).getId();
+        return userContext.getUserId();
     }
 
     @Override
