@@ -16,12 +16,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-        @ExceptionHandler(TransactionNotFoundException.class)
-        public ResponseEntity<ErrorResponse> handleTransactionNotFound(
-                        TransactionNotFoundException ex,
+        @ExceptionHandler(DomainException.class)
+        public ResponseEntity<ErrorResponse> handleDomainException(
+                        DomainException ex,
                         WebRequest request) {
 
-                log.warn("Transaction not found: {}", ex.getMessage());
+                log.warn("Domain error [{}]: {}", ex.getErrorCode(), ex.getMessage());
 
                 ErrorResponse error = ErrorResponse.of(
                                 ex.getHttpStatus().value(),
@@ -152,71 +152,4 @@ public class GlobalExceptionHandler {
                 return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        @ExceptionHandler(LabelNotFoundException.class)
-        public ResponseEntity<ErrorResponse> handleLabelNotFound(
-                        LabelNotFoundException ex,
-                        WebRequest request) {
-
-                log.warn("Label not found: {}", ex.getMessage());
-
-                ErrorResponse error = ErrorResponse.of(
-                                ex.getHttpStatus().value(),
-                                ex.getHttpStatus().getReasonPhrase(),
-                                ex.getMessage(),
-                                request.getDescription(false).replace("uri=", ""),
-                                ex.getErrorCode());
-
-                return new ResponseEntity<>(error, ex.getHttpStatus());
-        }
-
-        @ExceptionHandler(MaxLabelsExceededException.class)
-        public ResponseEntity<ErrorResponse> handleMaxLabelsExceeded(
-                        MaxLabelsExceededException ex,
-                        WebRequest request) {
-
-                log.warn("Max labels exceeded: {}", ex.getMessage());
-
-                ErrorResponse error = ErrorResponse.of(
-                                ex.getHttpStatus().value(),
-                                ex.getHttpStatus().getReasonPhrase(),
-                                ex.getMessage(),
-                                request.getDescription(false).replace("uri=", ""),
-                                ex.getErrorCode());
-
-                return new ResponseEntity<>(error, ex.getHttpStatus());
-        }
-
-        @ExceptionHandler(LabelAlreadyExistsException.class)
-        public ResponseEntity<ErrorResponse> handleLabelAlreadyExists(
-                        LabelAlreadyExistsException ex,
-                        WebRequest request) {
-
-                log.warn("Label already exists: {}", ex.getMessage());
-
-                ErrorResponse error = ErrorResponse.of(
-                                ex.getHttpStatus().value(),
-                                ex.getHttpStatus().getReasonPhrase(),
-                                ex.getMessage(),
-                                request.getDescription(false).replace("uri=", ""),
-                                ex.getErrorCode());
-
-                return new ResponseEntity<>(error, ex.getHttpStatus());
-        }
-
-        @ExceptionHandler(WalletNotFoundException.class)
-        public ResponseEntity<ErrorResponse> handleWalletNotFound(
-                        WalletNotFoundException ex,
-                        WebRequest request) {
-
-                log.warn("Wallet not found: {}", ex.getMessage());
-
-                ErrorResponse error = ErrorResponse.of(
-                                ex.getHttpStatus().value(),
-                                ex.getHttpStatus().getReasonPhrase(),
-                                ex.getMessage(),
-                                request.getDescription(false).replace("uri=", ""),
-                                ex.getErrorCode());
-
-                return new ResponseEntity<>(error, ex.getHttpStatus());
-        }
 }
