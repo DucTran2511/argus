@@ -12,6 +12,8 @@ import com.argus.domain.port.persistence.WalletPersistencePort;
 import com.argus.domain.port.persistence.WalletStatsPersistencePort;
 import com.argus.domain.port.persistence.AddressBookPersistencePort;
 import com.argus.domain.port.persistence.WalletMetricsPersistencePort;
+import com.argus.domain.port.persistence.AlertRulePersistencePort;
+import com.argus.domain.port.persistence.AlertPersistencePort;
 
 import com.argus.domain.service.PriceService;
 import com.argus.domain.service.SmartMoneySignalEnricher;
@@ -23,6 +25,9 @@ import com.argus.domain.service.WalletStatsAggregator;
 import com.argus.domain.service.WalletStatsService;
 import com.argus.domain.service.SmartMoneyScoringService;
 import com.argus.domain.service.UserService;
+import com.argus.domain.service.AlertRuleService;
+import com.argus.domain.service.RuleMatcherService;
+import com.argus.domain.service.AlertService;
 import com.argus.domain.port.persistence.UserPersistencePort;
 
 import com.argus.infra.stream.StreamPublisher;
@@ -76,8 +81,27 @@ public class DomainServiceConfig {
     public WhaleDetectorService whaleDetectorService(
             SignalPersistencePort signalPersistencePort,
             SmartMoneySignalEnricher smartMoneySignalEnricher,
-            WalletMetricsPersistencePort walletMetricsPersistencePort) {
-        return new WhaleDetectorService(signalPersistencePort, smartMoneySignalEnricher, walletMetricsPersistencePort);
+            WalletMetricsPersistencePort walletMetricsPersistencePort,
+            RuleMatcherService ruleMatcherService) {
+        return new WhaleDetectorService(signalPersistencePort, smartMoneySignalEnricher, walletMetricsPersistencePort,
+                ruleMatcherService);
+    }
+
+    @Bean
+    public AlertRuleService alertRuleService(AlertRulePersistencePort alertRulePersistencePort) {
+        return new AlertRuleService(alertRulePersistencePort);
+    }
+
+    @Bean
+    public RuleMatcherService ruleMatcherService(
+            AlertRulePersistencePort alertRulePersistencePort,
+            AlertPersistencePort alertPersistencePort) {
+        return new RuleMatcherService(alertRulePersistencePort, alertPersistencePort);
+    }
+
+    @Bean
+    public AlertService alertService(AlertPersistencePort alertPersistencePort) {
+        return new AlertService(alertPersistencePort);
     }
 
     @Bean

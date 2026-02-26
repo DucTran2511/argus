@@ -1,5 +1,7 @@
 package com.argus.core.exception;
 
+import org.springframework.http.HttpStatus;
+
 public class DomainException extends RuntimeException {
 
     private final String errorCode;
@@ -15,6 +17,10 @@ public class DomainException extends RuntimeException {
         super(userMessage, cause);
         this.errorCode = errorCode;
         this.userMessage = userMessage;
+    }
+
+    public HttpStatus getHttpStatus() {
+        return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     public String getErrorCode() {
