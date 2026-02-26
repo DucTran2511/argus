@@ -13,7 +13,6 @@ Argus is a crypto intelligence platform that tracks smart money movements on-cha
 ## Tech Stack
 
 - **Backend**: Java 21 + Spring Boot 3.x
-- **AI**: LangChain4j + OpenAI/Ollama
 - **Blockchain**: Web3j
 - **Database**: PostgreSQL + TimescaleDB + Redis
 - **Message Queue**: Apache Kafka
